@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/TECView" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
