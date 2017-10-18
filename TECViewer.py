@@ -79,6 +79,9 @@ class TECView:
         self.toolbar.setObjectName(u'TECView')
         self.dlg = TECViewDialog()
 
+        self.dlg.fileListWidget.clear()
+        self.dlg.attributeList.clear()
+
         # - Button Connections  - #
         self.dlg.selectProjFolder.clicked.connect(self.selectProjFolder)
         self.dlg.geoRefBtn.clicked.connect(self.selectCrs)
@@ -294,6 +297,7 @@ class TECView:
             self.iface.messageBar().pushMessage(
                 'generating ' + TECitem.fileName)
             TECitem.outDir = outFolder
+            TECitem.iface = self.iface
             TECitem.export()
         self.writeSettings()
         self.dlg.done(1)
@@ -314,6 +318,7 @@ class TECfile(QListWidgetItem):
         refId = QgsCoordinateReferenceSystem.PostgisCrsId
         crs = QgsCoordinateReferenceSystem(3826, refId)
         self.crs = crs
+        self.iface = ''
 
         self.setText(os.path.basename(filePath))
 
@@ -338,19 +343,28 @@ class TECfile(QListWidgetItem):
         self.outDir = os.path.join(self.outDir,
                                    self.fileName.replace('.dat', ''))
         if os.path.isdir(self.outDir):
-            subprocess.call(['cmd', '/c', 'RD', self.outDir])
+            subprocess.call(['cmd', '/c', 'RD', '/S', '/Q', self.outDir])
             subprocess.call(['cmd', '/c', 'mkdir', self.outDir])
-            subprocess.call(['cmd', '/c', 'mkdir', self.outDir, 'supplements'])
+            subprocess.call(['cmd', '/c', 'mkdir',
+                             os.path.join(self.outDir, 'supplements')])
         else:
             subprocess.call(['cmd', '/c', 'mkdir', self.outDir])
-            subprocess.call(['cmd', '/c', 'mkdir', self.outDir, 'supplements'])
+            subprocess.call(['cmd', '/c', 'mkdir',
+                             os.path.join(self.outDir, 'supplements')])
         self.loadTEC()
         group = QgsProject.instance().layerTreeRoot().addGroup(self.fileName)
         for attr in self.attributes:
             if attr[1] == 1:
-                attrLayer = self.makeContentLayers(attr[0])
-                QgsMapLayerRegistry.instance().addMapLayer(attrLayer, False)
-                group.addLayer(attrLayer)
+                self.makeContentLayers(attr[0])
+                if len(attr[0]) > 10:
+                    rasterName = attr[0][0:10]
+                else:
+                    rasterName = attr[0]
+                rasterPath = os.path.join(self.outDir, rasterName + '.tif')
+                baseName = QFileInfo(rasterPath).baseName()
+                rasterLayer = QgsRasterLayer(rasterPath, baseName)
+                QgsMapLayerRegistry.instance().addMapLayer(rasterLayer, False)
+                group.addLayer(rasterLayer)
 
     def attributeList(self):
         attributes = self.attributes
@@ -593,7 +607,7 @@ class TECfile(QListWidgetItem):
         else:
             fieldName = fieldKey
 
-        rasterName = fieldKey
+        rasterName = fieldName
         processing.runalg('grass7:v.surf.rst',
                           {'input': self.nodeLayer,
                            'where': '',
@@ -631,7 +645,3 @@ class TECfile(QListWidgetItem):
                                os.path.join(c_folder, 'supplements'),
                                rasterName + '-mcurv')
                            })
-        rasterPath = os.path.join(c_folder, rasterName)
-        baseName = QFileInfo(rasterPath).baseName()
-        rasterLayer = QgsRasterLayer(rasterPath, baseName)
-        return rasterLayer
