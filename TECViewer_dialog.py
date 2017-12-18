@@ -26,9 +26,21 @@ import os
 import re
 from PyQt4 import QtGui, uic
 from PyQt4.QtGui import QIcon, QPixmap
+from qgis.gui import QgsColorRampComboBox
+from qgis.core import QgsStyleV2
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'TECViewer_dialog_base.ui'))
+
+Settings = dict()
+try:
+    f = open(os.path.join(os.path.dirname(__file__), '_settings_'), 'r')
+    dat = f.readlines()
+    for line in dat:
+        Settings.update(
+            {re.split('=', line)[0].strip(): re.split('=', line)[1].strip()})
+except:
+    f = open(os.path.join(os.path.dirname(__file__), '_settings_'), 'w')
 
 
 class TECViewDialog(QtGui.QDialog, FORM_CLASS):
@@ -43,24 +55,50 @@ class TECViewDialog(QtGui.QDialog, FORM_CLASS):
         self.setupUi(self)
         self.readSettings()
         self.loadIcon()
-        self.selectProjFolder.setToolTip(u'設定專案資料夾')
-        self.addFileBtn.setToolTip(u'選擇加入讀取清單中的TEC檔案')
 
     def readSettings(self):
-        self.settings = dict()
         try:
-            f = open(os.path.join(os.path.dirname(__file__), '_settings_'), 'r')
-            dat = f.readlines()
-            for line in dat:
-                self.settings.update(
-                    {re.split('=', line)[0]: re.split('=', line)[1]})
+            self.projFolderEdit.setText(Settings['last_proj'])
         except:
-            f = open(os.path.join(os.path.dirname(__file__), '_settings_'), 'w')
+            pass
 
     def loadIcon(self):
         pixMap = QPixmap(os.path.join(os.path.dirname(__file__),
-                                      'Georeference.svg'))
+                                      'georeference.svg'))
         geoIcon = QIcon(pixMap)
         self.geoRefBtn.setIcon(geoIcon)
         self.geoRefBtn.setIconSize(0.7*pixMap.rect().size())
-        self.geoRefBtn.setToolTip(u'設定參考座標系')
+
+        pixMap = QPixmap(os.path.join(os.path.dirname(__file__),
+                                      'settings.svg'))
+        settingIcon = QIcon(pixMap)
+        self.callSettingsBtn.setIcon(settingIcon)
+        self.callSettingsBtn.setIconSize(0.1*pixMap.rect().size())
+
+
+SETIING_DIAG_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'TEC_setting.ui'))
+
+
+class TECReadSettingDiag(QtGui.QDialog, SETIING_DIAG_CLASS):
+    def __init__(self, parent=None):
+        super(TECReadSettingDiag, self).__init__(parent)
+        self.setupUi(self)
+        self.readSettings()
+        self.colorRampSelector = QgsColorRampComboBox()
+        self.setColorRampBox()
+        self.colorRampSelector.setMinimumHeight(20)
+        self.ColorRampLayout.addWidget(self.colorRampSelector)
+
+    def readSettings(self):
+        try:
+            self.resolutionInput.setText(Settings['resolution'])
+            self.currentResLabel.setText('Current Setting : ' +
+                                         Settings['resolution'])
+            self.minDisInput.setText(str(float(Settings['min_Dist'])))
+        except:
+            pass
+
+    def setColorRampBox(self):
+        style = QgsStyleV2().defaultStyle()
+        self.colorRampSelector.populate(style)

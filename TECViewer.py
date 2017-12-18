@@ -39,6 +39,8 @@ from PyQt4.QtCore import QVariant, QFileInfo
 from osgeo import osr, gdal
 from gdalconst import GA_Update
 from itertools import izip as zip, count
+from qgis.utils import iface
+from .TECSettings.TECSettings import TECSettings as TecSettings
 import os
 
 
@@ -77,6 +79,7 @@ class TECView:
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'TECView')
         self.toolbar.setObjectName(u'TECView')
+        self.all_Attrs = list()
         self.dlg = TECViewDialog()
 
         self.dlg.fileListWidget.clear()
@@ -91,6 +94,7 @@ class TECView:
         self.dlg.cancelLoadBtn.clicked.connect(lambda: self.dlg.done(0))
         self.dlg.attributeList.clicked.connect(self.selectToShow)
         self.dlg.loadTECBtn.clicked.connect(self.loadTECfiles)
+        self.dlg.callSettingsBtn.clicked.connect(self.runSettings)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -208,7 +212,7 @@ class TECView:
 
     def selectProjFolder(self):
         try:
-            presetFolder = self.dlg.settings['last_proj']
+            presetFolder = self.dlg.projFolderEdit.text()
         except(KeyError):
             presetFolder = ''
         caption = 'Please choose a project folder'
@@ -301,6 +305,29 @@ class TECView:
             TECitem.export()
         self.writeSettings()
         self.dlg.done(1)
+
+    def attrs(self):
+        Attrs = list()
+        if self.all_Attrs:
+            for item in self.all_Attrs:
+                if type(item) == str:
+                    Attrs.append(item)
+                else:
+                    Attrs.append(item[0])
+        else:
+            self.all_Attrs = list()
+
+        for t in range(0, self.dlg.fileListWidget.count()):
+            TECitem = self.dlg.fileListWidget.item(t)
+            for z in range(0, len(TECitem.attributes)):
+                if TECitem.attributes[z][0] not in Attrs:
+                    Attrs.append(TECitem.attributes[z][0])
+                    self.all_Attrs.append(TECitem.attributes[z][0])
+
+    def runSettings(self):
+        self.attrs()
+        diag = TecSettings(self.iface, self.all_Attrs)
+        self.all_Attrs = diag.run()
 
 
 class TECfile(QListWidgetItem):
@@ -608,6 +635,8 @@ class TECfile(QListWidgetItem):
             fieldName = fieldKey
 
         rasterName = fieldName
+        iface.messageBar().pushMessage('Loading ' + fieldName + ' from ' +
+                                       self.nodeLayer.name())
         processing.runalg('grass7:v.surf.rst',
                           {'input': self.nodeLayer,
                            'where': '',
@@ -625,7 +654,7 @@ class TECfile(QListWidgetItem):
                            '-d': False,
                            'GRASS_REGION_PARAMETER':
                            "%f,%f,%f,%f" % (xmin, xmax, ymin, ymax),
-                           'GRASS_REGION_CELLSIZE_PARAMETER': 5.0,
+                           'GRASS_REGION_CELLSIZE_PARAMETER': 20.0,
                            'GRASS_SNAP_TOLERANCE_PARAMETER': -1.0,
                            'GRASS_MIN_AREA_PARAMETER': 1.0e-4,
                            'elevation': os.path.join(c_folder, rasterName),

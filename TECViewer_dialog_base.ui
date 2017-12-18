@@ -86,6 +86,9 @@
      <family>Cambria</family>
     </font>
    </property>
+   <property name="toolTip">
+    <string>選擇加入讀取清單中的TEC檔案</string>
+   </property>
    <property name="text">
     <string>Add</string>
    </property>
@@ -141,6 +144,9 @@
      <family>Cambria</family>
     </font>
    </property>
+   <property name="toolTip">
+    <string>移除所選的TEC檔案</string>
+   </property>
    <property name="text">
     <string>Delete</string>
    </property>
@@ -156,7 +162,7 @@
    </property>
    <property name="font">
     <font>
-     <family>Calibri</family>
+     <family>Times New Roman</family>
      <pointsize>13</pointsize>
      <weight>50</weight>
      <bold>false</bold>
@@ -177,7 +183,7 @@
    </property>
    <property name="font">
     <font>
-     <family>Calibri</family>
+     <family>Times New Roman</family>
      <pointsize>13</pointsize>
      <weight>50</weight>
      <bold>false</bold>
@@ -211,6 +217,9 @@
      <family>Cambria</family>
     </font>
    </property>
+   <property name="toolTip">
+    <string>設定專案資料夾</string>
+   </property>
    <property name="text">
     <string>Select</string>
    </property>
@@ -226,7 +235,7 @@
    </property>
    <property name="font">
     <font>
-     <family>Arial</family>
+     <family>Times New Roman</family>
      <pointsize>10</pointsize>
     </font>
    </property>
@@ -237,11 +246,14 @@
   <widget class="QPushButton" name="geoRefBtn">
    <property name="geometry">
     <rect>
-     <x>350</x>
+     <x>410</x>
      <y>23</y>
      <width>51</width>
      <height>41</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>設定參考座標系</string>
    </property>
    <property name="text">
     <string/>
@@ -307,6 +319,22 @@
      <width>211</width>
      <height>161</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="callSettingsBtn">
+   <property name="geometry">
+    <rect>
+     <x>350</x>
+     <y>23</y>
+     <width>51</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>轉Raster圖層設定</string>
+   </property>
+   <property name="text">
+    <string/>
    </property>
   </widget>
  </widget>
