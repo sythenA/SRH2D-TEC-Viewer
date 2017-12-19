@@ -8,6 +8,7 @@ from PyQt4.QtGui import QIcon, QPixmap, QGradient, QColor
 from PyQt4.QtCore import QSize, QRect
 from PyQt4.QtSvg import QSvgGenerator
 import os
+import subprocess
 
 
 class TECSettings:
@@ -72,7 +73,7 @@ class TECSettings:
 
     def removeIcons(self):
         for _file in self.iconList:
-            os.system('DEL /F "' + _file + '"' + ' >/dev/null 2>&1')
+            subprocess.Popen(['DEL', '/F', _file], shell=True)
 
     def run(self):
         result = self.dlg.exec_()
@@ -95,17 +96,13 @@ class attrItem(QListWidgetItem):
         self.setIcon(icon)
 
     def drawIcon(self, colorRamp):
-        FirstPColor = colorRamp.color(0.0)
-        SecondPColor = colorRamp.color(0.25)
-        ThirdPColor = colorRamp.color(0.5)
-        FourthPColor = colorRamp.color(0.75)
-        FifthPColor = colorRamp.color(1.0)
+        # input color ramp object: QgsVectorColorRampV2 object.
+        # QgsVectorColorRampV2 is a virtual object, the real object name in this
+        # case is QgsVectorGradientColorRampV2 object.
+        mStops = colorRamp.stops()
         linearGradient = QLinearGradient(0.0, 50.0, 200.0, 50.0)
-        linearGradient.setColorAt(0.0, FirstPColor)
-        linearGradient.setColorAt(0.25, SecondPColor)
-        linearGradient.setColorAt(0.5, ThirdPColor)
-        linearGradient.setColorAt(0.75, FourthPColor)
-        linearGradient.setColorAt(1.0, FifthPColor)
+        for item in mStops:
+            linearGradient.setColorAt(item.offset, item.color)
         linearGradient.setSpread(QGradient.PadSpread)
 
         svgName = os.path.join(os.path.dirname(__file__), self.text() + '.svg')
