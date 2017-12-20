@@ -4,7 +4,9 @@ from PyQt4.QtGui import QListWidgetItem
 from qgis.core import QgsCoordinateReferenceSystem, QgsMapLayerRegistry
 from qgis.core import QgsFields, QgsField, QgsProject, QgsRasterLayer, QGis
 from qgis.core import QgsVectorFileWriter, QgsVectorLayer, QgsFeature
-from qgis.core import QgsGeometry
+from qgis.core import QgsGeometry, QgsStyleV2, QgsRasterBandStats
+from qgis.core import QgsColorRampShader, QgsSingleBandPseudoColorRenderer
+from qgis.core import QgsRasterShader
 from osgeo import osr, gdal
 from gdalconst import GA_Update
 from PyQt4.QtCore import QVariant, QFileInfo
@@ -369,12 +371,100 @@ class TECfile(QListWidgetItem):
 
 
 class TEClayerBox:
-    def __init__(self, TECfileObj, all_Attrs):
+    def __init__(self, TECfileObj, attr_ramp):
         self.retriveFromTEC(TECfileObj)
-        self.all_Attrs = all_Attrs
+        self.arrangeColorRamp(attr_ramp)
+        self.renderAttributeLayers()
 
     def retriveFromTEC(self, TECObject):
         attrs = dict()
         for attrItem in TECObject.contentLayers:
             attrs.update({attrItem[0]: attrItem[1]})
         self.attrs = attrs
+        self.fileName = TECObject.text()
+
+    def arrangeColorRamp(self, attr_ramp):
+        defaultStyle = QgsStyleV2().defaultStyle()
+        ramp = dict()
+        for item in attr_ramp:
+            if type(item) == str:
+                ramp.update({item: defaultStyle.colorRamp('Greys')})
+            else:
+                ramp.update({item[0]: item[1]})
+        self.colorRamp = ramp
+
+    def renderAttributeLayers(self):
+        for key in self.attrs.keys():
+            layerId = self.attrs[key]
+            colorMap = self.colorRamp[key]
+            self.changeLayerColorMap(layerId, colorMap)
+
+    def multiply(self, lst, multiplier):
+        for i in range(0, len(lst)):
+            if type(lst[i]) == list:
+                lst[i] = self.multiply(lst[i], multiplier)
+            else:
+                lst[i] = lst[i]*multiplier
+        return lst
+
+    def add(self, lst, obj):
+        for i in range(0, len(lst)):
+            if type(lst[i]) == list:
+                lst[i] = self.add(lst[i], obj)
+            else:
+                lst[i] = lst[i] + obj
+        return lst
+
+    def changeLayerColorMap(self, layerId, colorMap):
+        layer = QgsMapLayerRegistry.instance().mapLayer(layerId)
+
+        provider = layer.dataProvider()
+        extent = layer.extent()
+
+        rampStops = colorMap.stops()
+        valueList = list()
+        colorList = list()
+
+        valueList.append(0.0)
+        colorList.append(colorMap.color1())
+        for item in rampStops:
+            valueList.append(item.offset)
+            colorList.append(item.color)
+        valueList.append(1.0)
+        colorList.append(colorMap.color2())
+
+        stats = provider.bandStatistics(1, QgsRasterBandStats.All, extent, 0)
+
+        Max = stats.maximumValue
+        Min = stats.minimumValue
+        statRange = Max - Min
+        valueList = self.add(self.multiply(valueList, statRange), Min)
+
+        ramplst = list()
+
+        rampItemStr = '<= ' + "%.3f" % valueList[0]
+        ramplst.append(
+            QgsColorRampShader.ColorRampItem(valueList[0], colorList[0],
+                                             rampItemStr))
+        for i in range(1, len(valueList)):
+            rampItemStr = "%.3f" % valueList[i-1] + ' - ' "%.3f" % valueList[i]
+            ramplst.append(
+                QgsColorRampShader.ColorRampItem(valueList[i], colorList[i],
+                                                 rampItemStr))
+        myRasterShader = QgsRasterShader()
+        myColorRamp = QgsColorRampShader()
+
+        myColorRamp.setColorRampItemList(ramplst)
+        if not colorMap.isDiscrete:
+            myColorRamp.setColorRampType(QgsColorRampShader.DISCRETE)
+        else:
+            myColorRamp.setColorRampType(QgsColorRampShader.INTERPOLATED)
+
+        myRasterShader.setRasterShaderFunction(myColorRamp)
+
+        myPseudoRenderer = QgsSingleBandPseudoColorRenderer(
+            layer.dataProvider(), layer.type(), myRasterShader)
+
+        layer.setRenderer(myPseudoRenderer)
+
+        layer.triggerRepaint()

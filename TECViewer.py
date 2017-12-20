@@ -29,7 +29,8 @@ from qgis.core import QgsCoordinateReferenceSystem
 from qgis.gui import QgsGenericProjectionSelector
 from itertools import izip as zip, count
 from .TECSettings.TECSettings import TECSettings as TecSettings
-from .tools.TECfile import TECfile
+from .tools.TECfile import TECfile, TEClayerBox
+from .profile.profilePlot import profilePlot
 import os
 import re
 import resources
@@ -197,10 +198,11 @@ class TECView:
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
-        if result:
+        if result == 1:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            pass
+            profileDiag = profilePlot(self.iface, self.TEC_Container)
+            profileDiag.run()
 
     def selectProjFolder(self):
         try:
@@ -302,6 +304,7 @@ class TECView:
     def loadTECfiles(self):
         projFolder = self.dlg.projFolderEdit.text()
         outFolder = os.path.join(projFolder, 'TECView')
+        self.TEC_Container = list()
         if not os.path.isdir(outFolder):
             os.system('mkdir ' + outFolder)
         for i in range(0, self.dlg.fileListWidget.count()):
@@ -311,6 +314,8 @@ class TECView:
             TECitem.outDir = outFolder
             TECitem.iface = self.iface
             TECitem.export()
+            item = TEClayerBox(TECitem, self.all_Attrs)
+            self.TEC_Container.append(item)
         self.writeSettings()
         self.dlg.done(1)
 

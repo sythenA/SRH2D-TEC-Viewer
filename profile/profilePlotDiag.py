@@ -10,4 +10,4 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
     def __init__(self, parent=None):
         super(profileViewerDialog, self).__init__(parent)
-        self.SetupUi(self)
+        self.setupUi(self)
