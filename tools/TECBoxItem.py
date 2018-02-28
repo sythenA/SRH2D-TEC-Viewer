@@ -18,14 +18,19 @@ class TECBoxItem(QTreeWidgetItem):
             self.addChild(layerItem(self, key, TECBox.attrs[key]))
 
     def hideAllLayers(self):
-        N = self.childCount
+        N = self.childCount()
         for i in range(0, N):
             self.child(i).setLayerInvisible()
+            self.child(i).setCheckState(0, Qt.Unchecked)
+            self.child(i).setFlags(
+                self.child(i).flags() ^ Qt.ItemIsUserCheckable)
 
     def showAllLayers(self):
-        N = self.childCount
+        N = self.childCount()
         for i in range(0, N):
             self.child(i).setLayerVisible()
+            self.child(i).setCheckState(0, Qt.Checked)
+            self.child(i).setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
 
     def doAsState(self):
         if self.checkState(0) == Qt.Checked:
@@ -55,3 +60,7 @@ class layerItem(QTreeWidgetItem):
             self.setLayerVisible()
         else:
             self.setLayerInvisible()
+
+    def setToActiveLayer(self):
+        mlayer = QgsMapLayerRegistry.instance().mapLayer(self.layerId)
+        iface.setActiveLayer(mlayer)

@@ -201,7 +201,8 @@ class TECView:
         if result == 1:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            profileDiag = profilePlot(self.iface, self.TEC_Container)
+            profileDiag = profilePlot(self.iface, self.TEC_Container,
+                                      self.dlg.projFolderEdit.text())
             profileDiag.run()
 
     def selectProjFolder(self):
@@ -307,6 +308,7 @@ class TECView:
         self.TEC_Container = list()
         if not os.path.isdir(outFolder):
             os.system('mkdir ' + outFolder)
+        self.attrs()
         for i in range(0, self.dlg.fileListWidget.count()):
             TECitem = self.dlg.fileListWidget.item(i)
             self.iface.messageBar().pushMessage(
