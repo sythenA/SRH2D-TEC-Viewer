@@ -1,9 +1,10 @@
 
-from PyQt4 import QtGui, uic
+from qgis.PyQt import QtGui, uic
 from PyQt4.Qwt5 import QwtPlot, QwtPlotZoomer, QwtPicker, QwtPlotPicker
 from PyQt4.Qwt5 import QwtPlotGrid
-from PyQt4.QtCore import Qt, QSize
-from PyQt4.QtGui import QSizePolicy, QPen, QColor
+from qgis.PyQt.QtCore import Qt, QSize
+from qgis.PyQt.QtGui import QSizePolicy, QPen, QColor, QStandardItemModel
+from .plotTool import plotTool
 import os
 
 
@@ -20,6 +21,8 @@ class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
         self.TecFileList.clear()
         self.activeLayerList.setShowGrid(False)
         self.setPlotWidget()
+        self.mdl = QStandardItemModel(0, 6)
+        self.resetBtn.clicked.connect(self.setRescale)
 
     def setPlotWidget(self):
         self.plotWidget = QwtPlot(self.plotFrame)
@@ -51,3 +54,8 @@ class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
 
         layout = self.plotFrame.layout()
         layout.addWidget(self.plotWidget)
+
+    def setRescale(self):
+        self.plotWidget.setAxisAutoScale(0)
+        self.plotWidget.setAxisAutoScale(2)
+        self.plotWidget.replot()

@@ -15,8 +15,6 @@ class plotCSTool:
         self.canvas = self.profilePlotMain.iface.mapCanvas()
         self.tool = profilePlotMainMapTool(
             self.canvas, self.profilePlotMain)
-        self.plotTool = profileSec(self.profilePlotMain.iface,
-                                   self.profilePlotMain.dlg)
         # the mouselistener
         self.pointstoDraw = []
         # Polyline in mapcanvas CRS analysed
@@ -24,6 +22,9 @@ class plotCSTool:
         self.dblclktemp = None
         # enable disctinction between leftclick and doubleclick
         self.lastFreeHandPoints = []
+
+        self.profileSec = profileSec(self.iface,
+                                     self.profilePlotMain.dlg)
 
         self.textquit0 = "Click for polyline and double click to end (right \
 click to cancel then quit)"
@@ -118,7 +119,7 @@ click to cancel then quit)"
         # launch analyses
         self.iface.mainWindow().statusBar().showMessage(
             str(self.pointstoDraw))
-        self.plotTool.getProfile(self.pointstoDraw)
+        self.profileSec.getProfile(self.pointstoDraw, self.tool)
         # Reset
         self.lastFreeHandPoints = self.pointstoDraw
         self.pointstoDraw = []

@@ -38,8 +38,7 @@ class DataReaderTool:
     """def __init__(self):
         self.profiles = None"""
 
-    def dataRasterReaderTool(self, iface, tool1, profile1, pointstoDraw1,
-                             fullresolution1):
+    def dataRasterReaderTool(self, iface, tool1, layer, pointstoDraw1):
         """
         Return a dictionnary : {"layer" : layer read,
                                 "band" : band read,
@@ -48,14 +47,12 @@ class DataReaderTool:
         """
         # init
         self.tool = tool1               # needed to transform point coordinates
-        self.profiles = profile1        # profile with layer and band to compute
+        self.profiles = dict()        # profile with layer and band to compute
+        self.profiles.update({"layer": layer})
         self.pointstoDraw = pointstoDraw1        # the polyline to compute
         self.iface = iface      # QGis interface to show messages in status bar
 
         distance = QgsDistanceArea()
-
-        layer = self.profiles["layer"]
-        choosenBand = self.profiles["band"]
 
         # Get the values on the lines
         l = []
@@ -69,11 +66,11 @@ class DataReaderTool:
             # for each polylines, set points x,y with map crs (%D)
             # and layer crs (%C)
             pointstoCal1 = self.tool.toLayerCoordinates(
-                self.profiles["layer"], QgsPoint(self.pointstoDraw[i][0],
-                                                 self.pointstoDraw[i][1]))
+                layer, QgsPoint(self.pointstoDraw[i][0],
+                                self.pointstoDraw[i][1]))
             pointstoCal2 = self.tool.toLayerCoordinates(
-                self.profiles["layer"], QgsPoint(self.pointstoDraw[i+1][0],
-                                                 self.pointstoDraw[i+1][1]))
+                layer, QgsPoint(self.pointstoDraw[i+1][0],
+                                self.pointstoDraw[i+1][1]))
             x1D = float(self.pointstoDraw[i][0])
             y1D = float(self.pointstoDraw[i][1])
             x2D = float(self.pointstoDraw[i+1][0])
@@ -87,21 +84,19 @@ class DataReaderTool:
             # Set the res of calcul
             try:
                 # resolution depend on the angle of ligne with normal
-                minPix = min(self.profiles["layer"].rasterUnitsPerPixelX(),
-                             self.profiles["layer"].rasterUnitsPerPixelY())
+                minPix = min(layer.rasterUnitsPerPixelX(),
+                             layer.rasterUnitsPerPixelY())
                 res = minPix*tlC/max(abs(x2C-x1C), abs(y2C-y1C))
             except ZeroDivisionError:
                 # Enventually use bigger step, whether full resolution is
                 # selected or not.
                 res = minPix*1.2
             steps = 1000  # max graph width in pixels
-            if fullresolution1:
+
+            if res != 0 and tlC/res < steps:
                 steps = int(tlC/res)
             else:
-                if res != 0 and tlC/res < steps:
-                    steps = int(tlC/res)
-                else:
-                    steps = 1000
+                steps = 1000
 
             if steps < 1:
                 steps = 1
@@ -127,20 +122,14 @@ class DataReaderTool:
                 xC = x1C + dxC * n
                 yC = y1C + dyC * n
                 attr = 0
-                if layer.type() == layer.PluginLayer and isProfilable(layer):
-                    ident = layer.identify(QgsPoint(xC, yC))
-                    try:
-                        attr = float(ident[1].values()[choosenBand])
-                    except:
-                        pass
-                else:  # RASTER LAYERS
-                    # this code adapted from valuetool plugin
-                    ident = layer.dataProvider().identify(
-                        QgsPoint(xC, yC), QgsRaster.IdentifyFormatValue)
-                    # if ident is not None and ident.has_key(choosenBand+1):
-                    if ident is not None and (choosenBand in ident.results()):
-                        attr = ident.results()[choosenBand]
-
+                # RASTER LAYERS
+                # this code adapted from valuetool plugin
+                ident = layer.dataProvider().identify(
+                    QgsPoint(xC, yC), QgsRaster.IdentifyFormatValue)
+                attr = ident.results()[1]
+                # if attr is None:
+                #    attr=float("nan")
+                # print(attr)
                 z += [attr]
                 x += [xC]
                 y += [yC]
@@ -150,16 +139,15 @@ class DataReaderTool:
             lbefore = l[len(l)-1]
         # End of polyline analysis
         # filling the main data dictionary "profiles"
-        self.profiles["l"] = l
-        self.profiles["z"] = z
-        self.profiles["x"] = x
-        self.profiles["y"] = y
+        self.profiles.update({"l": l})
+        self.profiles.update({"z": z})
+        self.profiles.update({"x": x})
+        self.profiles.update({"y": y})
         self.iface.mainWindow().statusBar().showMessage("")
 
         return self.profiles
 
-    def dataVectorReaderTool(self, iface1, tool1, profile1, pointstoDraw1,
-                             valbuf1):
+    def dataVectorReaderTool(self, iface1, tool1, layer, pointstoDraw1):
         """
         compute the projected points
         return :
@@ -186,17 +174,15 @@ class DataReaderTool:
                                 "z" : array of computed z
 
         """
-        layercrs = profile1["layer"].crs()
+        layercrs = layer.crs()
         mapcanvascrs = self.iface.mapCanvas().mapSettings().destinationCrs()
-
-        valbuffer = valbuf1
 
         projectedpoints = []
         buffergeom = None
 
         sourceCrs = QgsCoordinateReferenceSystem(
             self.iface.mapCanvas().mapSettings().destinationCrs())
-        destCrs = QgsCoordinateReferenceSystem(profile1["layer"].crs())
+        destCrs = QgsCoordinateReferenceSystem(layercrs)
         xform = QgsCoordinateTransform(sourceCrs, destCrs)
         xformrev = QgsCoordinateTransform(destCrs, sourceCrs)
 
@@ -209,7 +195,7 @@ class DataReaderTool:
         buffergeominlayercrs = qgis.core.QgsGeometry(buffergeom)
         tempresult = buffergeominlayercrs.transform(xform)
 
-        featsPnt = profile1["layer"].getFeatures(
+        featsPnt = layer.getFeatures(
             QgsFeatureRequest().setFilterRect(
                 buffergeominlayercrs.boundingBox()))
 
@@ -221,20 +207,13 @@ class DataReaderTool:
             if distpoint <= valbuffer:
                 distline = geominlayercrs.lineLocatePoint(point3)
                 pointprojected = geominlayercrs.interpolate(distline)
-                if profile1["band"] > -1:
-                    try:
-                        interptemp = float(featPnt[profile1["band"]])
-                    except:
-                        continue
-                else:
-                    interptemp = None
 
                 projectedpoints.append([distline,
                                         pointprojected.asPoint().x(),
                                         pointprojected.asPoint().y(),
                                         distpoint,
                                         0,
-                                        interptemp,
+                                        None,
                                         featPnt.geometry().asPoint().x(),
                                         featPnt.geometry().asPoint().y(),
                                         featPnt])
@@ -252,12 +231,11 @@ class DataReaderTool:
 
         # Preparing return value
         profile = {}
-        profile["layer"] = profile1["layer"]
-        profile["band"] = profile1["band"]
-        profile['l'] = [projectedpoint[0] for projectedpoint in projectedpoints]
-        profile['z'] = [projectedpoint[5] for projectedpoint in projectedpoints]
-        profile['x'] = [projectedpoint[1] for projectedpoint in projectedpoints]
-        profile['y'] = [projectedpoint[2] for projectedpoint in projectedpoints]
+        profile.update("layer", layer)
+        profile.update('l', [projectedpoint[0] for projectedpoint in projectedpoints])
+        profile.update('z', [projectedpoint[5] for projectedpoint in projectedpoints])
+        profile.update('x', [projectedpoint[1] for projectedpoint in projectedpoints])
+        profile.update('y', [projectedpoint[2] for projectedpoint in projectedpoints])
 
         multipoly = QgsGeometry.fromMultiPolyline(
             [[xform.transform(QgsPoint(projectedpoint[1], projectedpoint[2]),

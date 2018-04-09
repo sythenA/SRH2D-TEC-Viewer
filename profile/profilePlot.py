@@ -5,6 +5,7 @@ from qgis.PyQt.QtGui import QWidget, QColor
 from qgis.gui import QgsRubberBand, QgsVertexMarker
 from qgis.PyQt.QtCore import Qt, QSettings
 from drawTempLayer import plotCSTool
+from callMapTool import profileSec
 
 
 class profilePlot(QWidget):
@@ -20,6 +21,7 @@ class profilePlot(QWidget):
         self.dlg.TecFileList.itemActivated.connect(self.setToActive)
 
         self.iface = iface
+
         # the rubberband
         self.polygon = False
         self.rubberband = QgsRubberBand(self.iface.mapCanvas(), self.polygon)
@@ -42,6 +44,7 @@ class profilePlot(QWidget):
         else:
             self.loaddirectory = ''
 
+        # profile settings
         self.activateDrawProfileCS()
 
     def activateDrawProfileCS(self):
@@ -71,4 +74,3 @@ class profilePlot(QWidget):
     def setToActive(self, item, idx):
         if type(item) == layerItem:
             item.setToActiveLayer()
-

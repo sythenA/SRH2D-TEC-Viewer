@@ -2,18 +2,24 @@
 
 from PyQt4.QtCore import QSettings, Qt, QSize
 from PyQt4.QtGui import QPrinter, QPen, QPrintDialog, QPixmap, QFileDialog
+from PyQt4.QtGui import QBrush
 from PyQt4.QtSvg import QSvgGenerator
+from random import randint
 
 from math import sqrt
 
-from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotMarker, QwtPlotItem
+from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotMarker, QwtPlotItem, QwtPlot
 import itertools  # only needed for Qwt plot
 import os
+
+QtCorlors = {1: Qt.black, 2: Qt.red, 3: Qt.darkRed, 4: Qt.green,
+             5: Qt.darkGreen, 6: Qt.blue, 7: Qt.darkBlue, 8: Qt.cyan,
+             9: Qt.darkCyan, 10: Qt.magenta, 11: Qt.darkMagenta, 12: Qt.yellow,
+             13: Qt.darkYellow, 14: Qt.gray, 15: Qt.darkGray}
 
 
 class plotTool:
     def drawVertLine(self, wdg, pointstoDraw):
-
         profileLen = 0
         for i in range(0, len(pointstoDraw)-1):
             x1 = float(pointstoDraw[i][0])
@@ -25,14 +31,13 @@ class plotTool:
             vertLine = QwtPlotMarker()
             vertLine.setLineStyle(QwtPlotMarker.VLine)
             vertLine.setXValue(profileLen)
-            vertLine.attach(wdg.plotWdg)
+            vertLine.attach(wdg)
         profileLen = 0
 
-    def attachCurves(self, wdg, profiles, model1):
+    def attachCurves(self, wdg, profiles):
 
-        for i in range(0, model1.rowCount()):
-            tmp_name = ("%s#%d") % (profiles[i]["layer"].name(),
-                                    profiles[i]["band"]+1)
+        for i in range(0, len(profiles)):
+            tmp_name = ("%s") % (profiles[i]["layer"].name())
 
             # As QwtPlotCurve doesn't support nodata, split the data into single
             # lines
@@ -55,22 +60,70 @@ class plotTool:
             for j in range(len(xx)):
                 curve = QwtPlotCurve(tmp_name)
                 curve.setData(xx[j], yy[j])
-                curve.setPen(QPen(model1.item(i, 1).data(Qt.BackgroundRole), 3))
-                curve.attach(wdg.plotWdg)
-                if model1.item(i, 0).data(Qt.CheckStateRole):
-                    curve.setVisible(True)
-                else:
-                    curve.setVisible(False)
+                color = QtCorlors[randint(1, 14)]
+                curve.setPen(QPen(QBrush(color), 3.))
+                curve.attach(wdg)
 
             # scaling this
             try:
                 wdg.setAxisScale(2, 0, max(profiles[len(profiles)-1]["l"]), 0)
-                self.reScalePlot(wdg, profiles)
+                self.resetScale(wdg, profiles)
             except:
                 pass
                 # self.iface.mainWindow().statusBar().showMessage(
                 # "Problem with setting scale of plotting")
-        wdg.plotWdg.replot()
+        self.resetScale(wdg, profiles)
+        wdg.replot()
+
+    def resetScale(self, wdg, profiles):
+        if not profiles:
+            return
+
+        maxXVal = 0.
+        minXVal = 1.0E8
+        maxYVal = 0.
+        minYVal = 1.0E8
+
+        QwtPlot
+
+        for i in range(0, len(profiles)):
+            xx = profiles[i]["l"]
+            yy = profiles[i]["z"]
+            for j in range(len(yy)):
+                if yy[j] is None:
+                    xx[j] = None
+
+            xx = [k for k in xx if k is not None]
+
+            _maxXVal = max(xx)
+            _minXVal = min(xx)
+            _maxYVal = self.findMax(profiles, i)
+            _minYVal = self.findMin(profiles, i)
+
+            if _maxXVal > maxXVal:
+                maxXVal = _maxXVal
+            if _minXVal < minXVal:
+                minXVal = _minXVal
+            if _maxYVal > maxYVal:
+                maxYVal = _maxYVal
+            if _minYVal < minYVal:
+                minYVal = _minYVal
+
+        # Y Axis rescale
+        if minYVal < maxYVal:
+            wdg.setAxisScale(0, minYVal*0.9, maxYVal*1.1, 0.)
+            wdg.replot()
+        elif minYVal == maxYVal:
+            wdg.setAxisScale(0, 0.0, 10.0, 0.)
+            wdg.replot()
+
+        # X Axis rescale
+        if minXVal < maxXVal:
+            wdg.setAxisScale(2, minXVal*0.9, maxXVal*1.1, 0.)
+            wdg.replot()
+        elif minXVal == maxXVal:
+            wdg.setAxisScale(2, 0.0, 100.0, 0.)
+            wdg.replot()
 
     def findMin(self, profiles, nr):
         minVal = min(z for z in profiles[nr]["z"] if z is not None)
@@ -80,58 +133,23 @@ class plotTool:
         maxVal = max(z for z in profiles[nr]["z"] if z is not None) + 1
         return maxVal
 
-    def reScalePlot(self, wdg, profiles, auto=False):
-        # called when spinbox value changed
-        if profiles is None:
-            return
-        minimumValue = wdg.sbMinVal.value()
-        maximumValue = wdg.sbMaxVal.value()
-
-        if minimumValue == maximumValue:
-            # Automatic mode
-            minimumValue = 1000000000
-            maximumValue = -1000000000
-            for i in range(0, len(profiles)):
-                if (profiles[i]["layer"] != None and
-                        len([z for z in
-                             profiles[i]["z"] if z is not None]) > 0):
-
-                    if self.findMin(profiles, i) < minimumValue:
-                        minimumValue = self.findMin(profiles, i)
-                    if self.findMax(profiles, i) > maximumValue:
-                        maximumValue = self.findMax(profiles, i)
-                    wdg.sbMaxVal.setValue(maximumValue)
-                    wdg.sbMinVal.setValue(minimumValue)
-                    wdg.sbMaxVal.setEnabled(True)
-                    wdg.sbMinVal.setEnabled(True)
-
-        if minimumValue < maximumValue:
-            wdg.plotWdg.setAxisScale(0, minimumValue, maximumValue, 0)
-            wdg.plotWdg.replot()
-
     def clearData(self, wdg, profiles):
         # erase one of profiles
         if not profiles:
             return
 
-        wdg.plotWdg.clear()
+        wdg.clear()
         for i in range(0, len(profiles)):
             profiles[i]["l"] = []
             profiles[i]["z"] = []
-        temp1 = wdg.plotWdg.itemList()
+        temp1 = wdg.plotWidget.itemList()
         for j in range(len(temp1)):
             if temp1[j].rtti() == QwtPlotItem.Rtti_PlotCurve:
                 temp1[j].detach()
-        # wdg.plotWdg.replot()
-
-        wdg.sbMaxVal.setEnabled(False)
-        wdg.sbMinVal.setEnabled(False)
-        wdg.sbMaxVal.setValue(0)
-        wdg.sbMinVal.setValue(0)
 
     def changeColor(self, wdg, color1, name):
         # Action when clicking the tableview - color
-        temp1 = wdg.plotWdg.itemList()
+        temp1 = wdg.plotWidget.itemList()
         for i in range(len(temp1)):
             if name == str(temp1[i].title().text()):
                 curve = temp1[i]
