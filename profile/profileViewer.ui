@@ -115,7 +115,7 @@
    </property>
    <layout class="QVBoxLayout" name="aLayout">
     <item>
-     <widget class="QTableWidget" name="activeLayerList"/>
+     <widget class="QListWidget" name="activeLayerList"/>
     </item>
    </layout>
   </widget>

@@ -1,10 +1,14 @@
 
+import os
 from qgis.gui import QgsRubberBand, QgsVertexMarker
 from qgis.core import QgsMapLayer, QgsProject, QgsMapLayerRegistry
-from qgis.PyQt.QtCore import Qt, QSettings, QT_VERSION_STR
-from qgis.PyQt.QtGui import QWidget, QColor
+from qgis.PyQt.QtCore import Qt, QSettings, QT_VERSION_STR, QSize, QLine, QRect
+from qgis.PyQt.QtGui import QWidget, QColor, QListWidgetItem, QPen, QBrush
+from qgis.PyQt.QtGui import QPainter, QPixmap, QIcon
+from qgis.PyQt.QtSvg import QSvgGenerator
 from .plotTool import plotTool
 from .dataReaderTool import DataReaderTool
+from random import randint
 
 
 class profileSec(QWidget):
@@ -29,6 +33,8 @@ class profileSec(QWidget):
         # "layer":layer1, "curve":curve1}
         self.profiles = None
 
+        self.dlg.activeLayerList.itemChanged.connect(self.plotProfiles)
+
     def getProfile(self, points1, toolRenderer, vertline=True):
         self.rubberbandbuf.reset()
         self.pointstoDraw = points1
@@ -45,8 +51,7 @@ class profileSec(QWidget):
         if vertline:      # Plotting vertical lines at the node of polyline draw
             plotTool().drawVertLine(self.dlg.plotWidget, self.pointstoDraw)
 
-        layersList = self.layersSelected()
-        self.iface.messageBar().pushMessage(str(len(layersList)))
+        layersList, TECfiles = self.layersSelected()
         # calculate profiles
         for i in range(0, len(layersList)):
             if layersList[i].type() == QgsMapLayer.VectorLayer:
@@ -54,6 +59,7 @@ class profileSec(QWidget):
                     self.iface, toolRenderer, layersList[i],
                     self.pointstoDraw)
                 self.profiles.append(vec_profile)
+                self.profiles[-1].update({'TECName': TECfiles[i]})
                 self.rubberbandbuf.addGeometry(buffer, None)
                 self.rubberbandbuf.addGeometry(multipoly, None)
 
@@ -61,18 +67,17 @@ class profileSec(QWidget):
                 self.profiles.append(DataReaderTool().dataRasterReaderTool(
                     self.iface, toolRenderer, layersList[i],
                     self.pointstoDraw))
+                self.profiles[-1].update({'TECName': TECfiles[i]})
 
         # plot profiles
-        plotTool().attachCurves(self.dlg.plotWidget, self.profiles)
-        # plotTool().reScalePlot(self.dlg, self.profiles)
+        for i in range(0, len(self.profiles)):
+            profileItem = profileListItem(self.profiles[i],
+                                          self.dlg.activeLayerList)
+            self.dlg.activeLayerList.addItem(profileItem)
+
+        self.plotProfiles()
         # update the legend table
         # self.dlg.updateCoordinateTab()
-
-        # Mouse tracking(pyGraph Only)
-        """
-        if self.doTracking:
-            self.rubberbandpoint.show()
-        self.enableMouseCoordonates(self.dlg.plotlibrary)"""
 
     def removeClosedLayers(self, model1):
         qgisLayerNames = []
@@ -97,14 +102,77 @@ class profileSec(QWidget):
     def layersSelected(self):
         TECs = self.dlg.TecFileList.topLevelItemCount()
         activeLayers = list()
+        TECfiles = list()
 
         for i in range(0, TECs):
             TECitem = self.dlg.TecFileList.topLevelItem(i)
-            for j in range(0, TECitem.childCount()):
-                layerItem = TECitem.child(j)
-                if layerItem.checkState(0) == Qt.Checked:
-                    layerId = layerItem.layerId
+            TECName = TECitem.text(0)
+            if TECitem.childCount() > 0:
+                for j in range(0, TECitem.childCount()):
+                    layerItem = TECitem.child(j)
+                    if layerItem.checkState(0) == Qt.Checked:
+                        layerId = layerItem.layerId
+                        layer = QgsMapLayerRegistry.instance().mapLayer(layerId)
+                        activeLayers.append(layer)
+                        TECfiles.append(TECName)
+            else:
+                if TECitem.checkState(0) == Qt.Checked:
+                    layerId = TECitem.layerId
                     layer = QgsMapLayerRegistry.instance().mapLayer(layerId)
                     activeLayers.append(layer)
+                    TECfiles.append(TECName)
 
-        return activeLayers
+        return activeLayers, TECfiles
+
+    def plotProfiles(self):
+        self.dlg.plotWidget.clear()
+        profileList = list()
+        for i in range(0, self.dlg.activeLayerList.count()):
+            item = self.dlg.activeLayerList.item(i)
+            profileList.append(item.profile)
+        plotTool().attachCurves(self.dlg.plotWidget, profileList)
+
+
+QtCorlors = {1: Qt.black, 2: Qt.red, 3: Qt.darkRed, 4: Qt.green,
+             5: Qt.darkGreen, 6: Qt.blue, 7: Qt.darkBlue, 8: Qt.cyan,
+             9: Qt.darkCyan, 10: Qt.magenta, 11: Qt.darkMagenta, 12: Qt.yellow,
+             13: Qt.darkYellow, 14: Qt.gray, 15: Qt.darkGray}
+
+
+class profileListItem(QListWidgetItem):
+    def __init__(self, profile, parent):
+        self.name = profile['TECName'] + '_' + profile['layer'].name()
+        super(profileListItem, self).__init__(self.name, parent)
+        self.profile = profile
+        self.width = 3.
+        self.color = QtCorlors[randint(1, 14)]
+        self.setStyle()
+        icon = self.genIcon()
+        self.setIcon(icon)
+
+    def setStyle(self):
+        self.Style = QPen(QBrush(self.color), self.width)
+        self.profile.update({'style': self.Style})
+
+    def genIcon(self):
+        TECName = self.profile['TECName']
+        svgName = os.path.join(os.path.dirname(__file__),
+                               TECName + '_' + self.name + '.svg')
+        pix = QSvgGenerator()
+        pix.setFileName(svgName)
+        pix.setSize(QSize(200, 100))
+        painter = QPainter()
+        painter.begin(pix)
+        painter.setPen(Qt.NoPen)
+        # Paint the background before draw the legend line.(Essential!!)
+        painter.fillRect(QRect(0, 0, 200, 100), Qt.white)
+        painter.setPen(QPen(self.color, self.width*3, Qt.SolidLine))
+        # Draw icon
+        painter.drawLine(QLine(0, 50, 200, 50))
+        painter.end()
+
+        pixmap = QPixmap(svgName)
+        icon = QIcon(pixmap)
+        self.icoName = svgName
+
+        return icon

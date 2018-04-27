@@ -1,20 +1,22 @@
 
 from profilePlotDiag import profileViewerDialog
 from ..tools.TECBoxItem import TECBoxItem, layerItem
-from qgis.PyQt.QtGui import QWidget, QColor
+from qgis.PyQt.QtGui import QWidget, QColor, QTreeWidgetItem
 from qgis.gui import QgsRubberBand, QgsVertexMarker
+from qgis.core import QgsProject, QgsMapLayer
 from qgis.PyQt.QtCore import Qt, QSettings
 from drawTempLayer import plotCSTool
 from callMapTool import profileSec
 
 
 class profilePlot(QWidget):
-    def __init__(self, iface, TEC_Container, projFolder, parent=None):
+    def __init__(self, iface, projFolder=None, parent=None,
+                 TEC_Box=None):
         QWidget.__init__(self, parent)
 
         self.iface = iface
         self.dlg = profileViewerDialog()
-        self.setLayerList(TEC_Container)
+        self.TEC_Box = TEC_Box
 
         #  ---Signals Connections---
         self.dlg.TecFileList.itemChanged.connect(self.setLayerState)
@@ -58,6 +60,11 @@ class profilePlot(QWidget):
         self.iface.mapCanvas().setMapTool(self.toolrenderer.tool)
 
     def run(self):
+        if self.TEC_Box:
+            self.setLayerList(self.TEC_Box)
+        else:
+            self.layerFromRegistry()
+
         self.dlg.show()
         result = self.dlg.exec_()
         if result:
@@ -67,6 +74,26 @@ class profilePlot(QWidget):
         for item in TEC_Container:
             self.dlg.TecFileList.addTopLevelItem(
                 TECBoxItem(self.dlg.TecFileList, item))
+
+    def layerFromRegistry(self):
+        root = QgsProject.instance().layerTreeRoot()
+        for node in root.children():
+            if len(node.children()) > 0:
+                pWidget = QTreeWidgetItem(self.dlg.TecFileList, node.name())
+                for layer in node.children():
+                    if layer.layer().layerType() == QgsMapLayer.RasterLayer():
+                        attrName = layer.name()
+                        attrLayerId = layer.layerId()
+
+                        cWidget = layerItem(pWidget, attrName, attrLayerId)
+                        pWidget.addChild(cWidget)
+                self.dlg.TECfileList.addTopLevelItem(pWidget)
+            else:
+                attrName = node.name()
+                attrLayerId = node.layerId()
+                pWidget = layerItem(self.dlg.TecFileList, attrName, attrLayerId)
+                self.dlg.TecFileList.addTopLevelItem(pWidget)
+        self.activateDrawProfileCS()
 
     def setLayerState(self, item, idx):
         item.doAsState()

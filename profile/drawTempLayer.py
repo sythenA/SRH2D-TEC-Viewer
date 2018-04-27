@@ -1,4 +1,5 @@
 
+import os
 from qgis.gui import QgsMapTool
 from qgis.core import QGis, QgsPoint
 from qgis.PyQt.QtCore import pyqtSignal, Qt
@@ -10,6 +11,7 @@ from callMapTool import profileSec
 class plotCSTool:
     def __init__(self, profilePlotMain):
         self.profilePlotMain = profilePlotMain
+        self.profilePlotMain.dlg.closeWindow.connect(self.cleaning)
 
         self.iface = self.profilePlotMain.iface
         self.canvas = self.profilePlotMain.iface.mapCanvas()
@@ -73,6 +75,7 @@ click to cancel then quit)"
             self.profilePlotMain.rubberband.reset(self.profilePlotMain.polygon)
             self.profilePlotMain.rubberbandbuf.reset()
             self.profilePlotMain.rubberbandpoint.hide()
+            self.canvas.setCursor(QCursor(Qt.ArrowCursor))
         else:
             self.cleaning()
 
@@ -110,6 +113,7 @@ click to cancel then quit)"
             """
 
     def doubleClicked(self, position):
+        self.profilePlotMain.dlg.activeLayerList.clear()
         # if self.profilePlotMain.dockwidget.selectionmethod == 0:
         # Validation of line
         mapPos = self.canvas.getCoordinateTransform().toMapCoordinates(
@@ -145,7 +149,6 @@ click to cancel then quit)"
         self.iface.mainWindow().statusBar().showMessage("")
 
     def connectTool(self):
-
         self.tool.moved.connect(self.moved)
         self.tool.rightClicked.connect(self.rightClicked)
         self.tool.leftClicked.connect(self.leftClicked)

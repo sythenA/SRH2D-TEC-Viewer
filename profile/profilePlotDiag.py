@@ -2,7 +2,7 @@
 from qgis.PyQt import QtGui, uic
 from PyQt4.Qwt5 import QwtPlot, QwtPlotZoomer, QwtPicker, QwtPlotPicker
 from PyQt4.Qwt5 import QwtPlotGrid
-from qgis.PyQt.QtCore import Qt, QSize
+from qgis.PyQt.QtCore import Qt, QSize, pyqtSignal
 from qgis.PyQt.QtGui import QSizePolicy, QPen, QColor, QStandardItemModel
 from .plotTool import plotTool
 import os
@@ -13,13 +13,14 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
+    closeWindow = pyqtSignal()
+
     def __init__(self, parent=None):
         super(profileViewerDialog, self).__init__(parent)
         self.setupUi(self)
 
         self.TecFileList.setItemHidden(self.TecFileList.headerItem(), True)
         self.TecFileList.clear()
-        self.activeLayerList.setShowGrid(False)
         self.setPlotWidget()
         self.mdl = QStandardItemModel(0, 6)
         self.resetBtn.clicked.connect(self.setRescale)
@@ -59,3 +60,14 @@ class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
         self.plotWidget.setAxisAutoScale(0)
         self.plotWidget.setAxisAutoScale(2)
         self.plotWidget.replot()
+
+    def closeEvent(self, event):
+        self.closeWindow.emit()
+
+        # Delete the icons under plugin folder
+        folderPath = os.path.dirname(__file__)
+        fileUnderFold = os.listdir(folderPath)
+
+        for _file in fileUnderFold:
+            if _file.endswith('.svg'):
+                os.remove(os.path.join(folderPath, _file))

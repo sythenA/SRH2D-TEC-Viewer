@@ -1,21 +1,13 @@
 # -*- coding: big5 -*-
 
 from PyQt4.QtCore import QSettings, Qt, QSize
-from PyQt4.QtGui import QPrinter, QPen, QPrintDialog, QPixmap, QFileDialog
-from PyQt4.QtGui import QBrush
+from PyQt4.QtGui import QPrinter, QPrintDialog, QPixmap, QFileDialog
 from PyQt4.QtSvg import QSvgGenerator
-from random import randint
-
 from math import sqrt
 
 from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotMarker, QwtPlotItem, QwtPlot
 import itertools  # only needed for Qwt plot
 import os
-
-QtCorlors = {1: Qt.black, 2: Qt.red, 3: Qt.darkRed, 4: Qt.green,
-             5: Qt.darkGreen, 6: Qt.blue, 7: Qt.darkBlue, 8: Qt.cyan,
-             9: Qt.darkCyan, 10: Qt.magenta, 11: Qt.darkMagenta, 12: Qt.yellow,
-             13: Qt.darkYellow, 14: Qt.gray, 15: Qt.darkGray}
 
 
 class plotTool:
@@ -35,7 +27,6 @@ class plotTool:
         profileLen = 0
 
     def attachCurves(self, wdg, profiles):
-
         for i in range(0, len(profiles)):
             tmp_name = ("%s") % (profiles[i]["layer"].name())
 
@@ -56,12 +47,12 @@ class plotTool:
             yy = [list(g) for k, g in itertools.groupby(yy, lambda x:x is None)
                   if not k]
 
+            Cstyle = profiles[i]["style"]
             # Create & attach one QwtPlotCurve per one single line
             for j in range(len(xx)):
                 curve = QwtPlotCurve(tmp_name)
                 curve.setData(xx[j], yy[j])
-                color = QtCorlors[randint(1, 14)]
-                curve.setPen(QPen(QBrush(color), 3.))
+                curve.setPen(Cstyle)
                 curve.attach(wdg)
 
             # scaling this
@@ -111,7 +102,7 @@ class plotTool:
 
         # Y Axis rescale
         if minYVal < maxYVal:
-            wdg.setAxisScale(0, minYVal*0.9, maxYVal*1.1, 0.)
+            wdg.setAxisScale(0, minYVal-0.1*maxYVal, maxYVal*1.1, 0.)
             wdg.replot()
         elif minYVal == maxYVal:
             wdg.setAxisScale(0, 0.0, 10.0, 0.)
@@ -119,7 +110,7 @@ class plotTool:
 
         # X Axis rescale
         if minXVal < maxXVal:
-            wdg.setAxisScale(2, minXVal*0.9, maxXVal*1.1, 0.)
+            wdg.setAxisScale(2, minXVal*0.9, maxXVal+0.1*minXVal, 0.)
             wdg.replot()
         elif minXVal == maxXVal:
             wdg.setAxisScale(2, 0.0, 100.0, 0.)
@@ -142,7 +133,7 @@ class plotTool:
         for i in range(0, len(profiles)):
             profiles[i]["l"] = []
             profiles[i]["z"] = []
-        temp1 = wdg.plotWidget.itemList()
+        temp1 = wdg.itemList()
         for j in range(len(temp1)):
             if temp1[j].rtti() == QwtPlotItem.Rtti_PlotCurve:
                 temp1[j].detach()
