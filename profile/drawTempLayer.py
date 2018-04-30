@@ -75,7 +75,6 @@ click to cancel then quit)"
             self.profilePlotMain.rubberband.reset(self.profilePlotMain.polygon)
             self.profilePlotMain.rubberbandbuf.reset()
             self.profilePlotMain.rubberbandpoint.hide()
-            self.canvas.setCursor(QCursor(Qt.ArrowCursor))
         else:
             self.cleaning()
 
@@ -134,6 +133,12 @@ click to cancel then quit)"
         if self.profilePlotMain.dockwidget.selectionmethod == 1:
             return"""
 
+    def reActivate(self):
+        self.profilePlotMain.rubberbandpoint.show()
+        self.canvas.setCursor(QCursor(Qt.CrossCursor))
+        self.canvas.setMapTool(self.tool)
+        self.connectTool()
+
     def cleaning(self):            # used on right click
         try:
             # print str(self.previousLayer)
@@ -146,6 +151,7 @@ click to cancel then quit)"
         self.canvas.setMapTool(self.profilePlotMain.saveTool)
         self.profilePlotMain.rubberband.reset(self.profilePlotMain.polygon)
         self.profilePlotMain.rubberbandbuf.reset()
+        self.canvas.setCursor(QCursor(Qt.ArrowCursor))
         self.iface.mainWindow().statusBar().showMessage("")
 
     def connectTool(self):
@@ -154,6 +160,7 @@ click to cancel then quit)"
         self.tool.leftClicked.connect(self.leftClicked)
         self.tool.doubleClicked.connect(self.doubleClicked)
         self.tool.desactivate.connect(self.deactivate)
+        self.profilePlotMain.dlg.reActivateBtn.clicked.connect(self.reActivate)
 
         self.iface.mainWindow().statusBar().showMessage(self.textquit0)
 

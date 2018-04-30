@@ -6,6 +6,7 @@ from qgis.PyQt.QtCore import Qt, QSettings, QT_VERSION_STR, QSize, QLine, QRect
 from qgis.PyQt.QtGui import QWidget, QColor, QListWidgetItem, QPen, QBrush
 from qgis.PyQt.QtGui import QPainter, QPixmap, QIcon
 from qgis.PyQt.QtSvg import QSvgGenerator
+from .lineStyleDiag import lineStyleSelector
 from .plotTool import plotTool
 from .dataReaderTool import DataReaderTool
 from random import randint
@@ -34,6 +35,8 @@ class profileSec(QWidget):
         self.profiles = None
 
         self.dlg.activeLayerList.itemChanged.connect(self.plotProfiles)
+        self.dlg.activeLayerList.itemDoubleClicked.connect(
+            self.changeCurveStyle)
 
     def getProfile(self, points1, toolRenderer, vertline=True):
         self.rubberbandbuf.reset()
@@ -78,6 +81,23 @@ class profileSec(QWidget):
         self.plotProfiles()
         # update the legend table
         # self.dlg.updateCoordinateTab()
+
+    def changeCurveStyle(self, item):
+        selectorWindow = lineStyleSelector(self.iface, init_Color=item.color,
+                                           init_LineStyle=item.lineStyle,
+                                           init_Width=item.width)
+        res = selectorWindow.run()
+        if res:
+            color = res[0]
+            lineStyle = res[1]
+            width = res[2]
+
+            item.color = color
+            item.lineStyle = lineStyle
+            item.width = width
+            item.genIcon()
+            item.setStyle()
+            self.plotProfiles()
 
     def removeClosedLayers(self, model1):
         qgisLayerNames = []
@@ -140,6 +160,8 @@ QtCorlors = {1: Qt.black, 2: Qt.red, 3: Qt.darkRed, 4: Qt.green,
 
 
 class profileListItem(QListWidgetItem):
+    lineStyle = Qt.SolidLine
+
     def __init__(self, profile, parent):
         self.name = profile['TECName'] + '_' + profile['layer'].name()
         super(profileListItem, self).__init__(self.name, parent)
@@ -147,11 +169,10 @@ class profileListItem(QListWidgetItem):
         self.width = 3.
         self.color = QtCorlors[randint(1, 14)]
         self.setStyle()
-        icon = self.genIcon()
-        self.setIcon(icon)
+        self.genIcon()
 
     def setStyle(self):
-        self.Style = QPen(QBrush(self.color), self.width)
+        self.Style = QPen(QBrush(self.color), self.width, style=self.lineStyle)
         self.profile.update({'style': self.Style})
 
     def genIcon(self):
@@ -166,7 +187,7 @@ class profileListItem(QListWidgetItem):
         painter.setPen(Qt.NoPen)
         # Paint the background before draw the legend line.(Essential!!)
         painter.fillRect(QRect(0, 0, 200, 100), Qt.white)
-        painter.setPen(QPen(self.color, self.width*3, Qt.SolidLine))
+        painter.setPen(QPen(self.color, self.width*3, self.lineStyle))
         # Draw icon
         painter.drawLine(QLine(0, 50, 200, 50))
         painter.end()
@@ -175,4 +196,4 @@ class profileListItem(QListWidgetItem):
         icon = QIcon(pixmap)
         self.icoName = svgName
 
-        return icon
+        self.setIcon(icon)

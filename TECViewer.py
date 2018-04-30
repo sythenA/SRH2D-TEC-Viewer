@@ -22,6 +22,7 @@
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
 from PyQt4.QtGui import QAction, QIcon, QFileDialog, QListWidgetItem
+from qgis.PyQt.QtGui import QMenu, QFileDialog
 # Initialize Qt resources from file resources.py
 # Import the code for the dialog
 from TECViewer_dialog import TECViewDialog, Settings
@@ -88,6 +89,10 @@ class TECView:
         self.dlg.attributeList.clicked.connect(self.selectToShow)
         self.dlg.loadTECBtn.clicked.connect(self.loadTECfiles)
         self.dlg.callSettingsBtn.clicked.connect(self.runSettings)
+        self.dlg.fileListWidget.customContextMenuRequested.connect(
+            self.subMenuOnFileList)
+
+        self.profiler = profilePlot(self.iface)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -181,6 +186,12 @@ class TECView:
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Profile Viewer'),
+            callback=self.profiler.run,
+            parent=self.iface.mainWindow())
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -201,8 +212,9 @@ class TECView:
         if result == 1:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            profileDiag = profilePlot(self.iface, self.TEC_Container,
-                                      self.dlg.projFolderEdit.text())
+            profileDiag = profilePlot(self.iface,
+                                      self.dlg.projFolderEdit.text(),
+                                      TEC_Box=self.TEC_Container)
             profileDiag.run()
 
     def selectProjFolder(self):
@@ -343,3 +355,22 @@ class TECView:
         self.attrs()
         diag = TecSettings(self.iface, self.all_Attrs)
         self.all_Attrs = diag.run()
+
+    def subMenuOnFileList(self, pos):
+        cursorPos = self.dlg.fileListWidget.mapToGlobal(pos)
+        subMenu = QMenu()
+        subMenu.addAction('Export', self.exportTEC)
+
+        subMenu.exec_(cursorPos)
+
+    def exportTEC(self):
+        item = self.dlg.fileListWidget.currentItem()
+        folder = os.path.dirname(item.filePath)
+        folder = QFileDialog.getExistingDirectory(self.dlg,
+                                                   'Select Output Folder',
+                                                   folder)
+        tecName = item.fileName
+        self.iface.messageBar().pushMessage('Export ' + tecName + ' to ' +
+                                            folder)
+
+        allItem = self.dlg.fileListWidget.selectedItems()

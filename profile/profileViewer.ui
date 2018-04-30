@@ -24,12 +24,12 @@
    </property>
    <item>
     <property name="text">
-     <string>Profile From Existing Layer</string>
+     <string>Hand Drawing</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>New Profile</string>
+     <string>Profile From Existing Layer</string>
     </property>
    </item>
   </widget>
@@ -118,6 +118,19 @@
      <widget class="QListWidget" name="activeLayerList"/>
     </item>
    </layout>
+  </widget>
+  <widget class="QPushButton" name="reActivateBtn">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>10</y>
+     <width>101</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Activate Plot</string>
+   </property>
   </widget>
  </widget>
  <resources/>
