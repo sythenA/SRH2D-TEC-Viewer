@@ -34,6 +34,9 @@
      <height>251</height>
     </rect>
    </property>
+   <property name="contextMenuPolicy">
+    <enum>Qt::CustomContextMenu</enum>
+   </property>
   </widget>
   <widget class="QPushButton" name="addFileBtn">
    <property name="geometry">

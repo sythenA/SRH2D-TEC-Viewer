@@ -1,9 +1,9 @@
 
 from profilePlotDiag import profileViewerDialog
 from ..tools.TECBoxItem import TECBoxItem, layerItem
-from qgis.PyQt.QtGui import QWidget, QColor, QTreeWidgetItem
+from qgis.PyQt.QtGui import QWidget, QColor, QTreeWidgetItem, QCursor
 from qgis.gui import QgsRubberBand, QgsVertexMarker
-from qgis.core import QgsProject, QgsMapLayer
+from qgis.core import QgsProject, QgsMapLayer, QgsMapLayerRegistry
 from qgis.PyQt.QtCore import Qt, QSettings
 from drawTempLayer import plotCSTool
 from callMapTool import profileSec
@@ -47,7 +47,8 @@ class profilePlot(QWidget):
             self.loaddirectory = ''
 
         # profile settings
-        self.activateDrawProfileCS()
+        registry = QgsMapLayerRegistry.instance()
+        registry.legendLayersAdded.connect(self.layerFromRegistry)
 
     def activateDrawProfileCS(self):
         # Save the standard mapttool for restoring it at the end
@@ -60,6 +61,8 @@ class profilePlot(QWidget):
         self.iface.mapCanvas().setMapTool(self.toolrenderer.tool)
 
     def run(self):
+        self.activateDrawProfileCS()
+        self.cursor = QCursor(Qt.CrossCursor)
         if self.TEC_Box:
             self.setLayerList(self.TEC_Box)
         else:
@@ -76,6 +79,7 @@ class profilePlot(QWidget):
                 TECBoxItem(self.dlg.TecFileList, item))
 
     def layerFromRegistry(self):
+        self.dlg.TecFileList.clear()
         root = QgsProject.instance().layerTreeRoot()
         for node in root.children():
             if len(node.children()) > 0:
@@ -87,13 +91,12 @@ class profilePlot(QWidget):
 
                         cWidget = layerItem(pWidget, attrName, attrLayerId)
                         pWidget.addChild(cWidget)
-                self.dlg.TECfileList.addTopLevelItem(pWidget)
+                self.dlg.TecFileList.addTopLevelItem(pWidget)
             else:
                 attrName = node.name()
                 attrLayerId = node.layerId()
                 pWidget = layerItem(self.dlg.TecFileList, attrName, attrLayerId)
                 self.dlg.TecFileList.addTopLevelItem(pWidget)
-        self.activateDrawProfileCS()
 
     def setLayerState(self, item, idx):
         item.doAsState()

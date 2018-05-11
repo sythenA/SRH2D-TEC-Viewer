@@ -43,9 +43,10 @@ class layerItem(QTreeWidgetItem):
     def __init__(self, parent, attrName, layerId):
         super(layerItem, self).__init__(parent, attrName)
 
+        self.layerId = layerId
         self.setCheckState(0, Qt.Checked)
         self.setText(0, attrName)
-        self.layerId = layerId
+        self.outputFolder = ''
 
     def setLayerVisible(self):
         ml = QgsMapLayerRegistry.instance().mapLayer(self.layerId)

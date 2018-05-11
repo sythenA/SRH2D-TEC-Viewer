@@ -29,7 +29,7 @@ class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
         self.plotWidget = QwtPlot(self.plotFrame)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(
             self.plotWidget.sizePolicy().hasHeightForWidth())
         self.plotWidget.setSizePolicy(sizePolicy)
@@ -53,7 +53,7 @@ class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
         grid.setPen(QPen(QColor('grey'), 0, Qt.DotLine))
         grid.attach(self.plotWidget)
 
-        layout = self.plotFrame.layout()
+        layout = self.plotLayout
         layout.addWidget(self.plotWidget)
 
     def setRescale(self):
