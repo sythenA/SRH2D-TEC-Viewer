@@ -1,9 +1,11 @@
 
 from contourPlotDiag import contourGenDialog
 from qgis.core import QgsProject, QgsMapLayerRegistry, QgsRasterLayer
+from qgis.core import QgsRasterBandStats, QgsMapLayer
 from qgis.PyQt.QtGui import QTreeWidgetItem, QFileDialog
 from qgis.PyQt.QtCore import Qt
-from osgeo import gdal
+from osgeo import gdal, ogr
+from osgeo.gdalconst import GA_ReadOnly
 import os
 from ..tools.TECBoxItem import layerItem
 
@@ -26,20 +28,23 @@ class contourPlot:
     def __init__(self, iface):
         self.iface = iface
         self.dlg = contourGenDialog()
+        self.root = QgsProject.instance().layerTreeRoot()
+        self.registry = QgsMapLayerRegistry.instance()
 
         registry = QgsMapLayerRegistry.instance()
-        registry.legendLayersAdded.connect(self.layerFromRegistry)
         registry.layerRemoved.connect(self.layerFromRegistry)
 
         self.dlg.attrSelectBtn.clicked.connect(self.attrSelected)
         self.dlg.layersAddBtn.clicked.connect(self.addToGenContour)
         self.dlg.layersDeleteBtn.clicked.connect(self.removeFromAdded)
         self.dlg.removeAllBtn.clicked.connect(self.cleanSelected)
+        self.dlg.closeWindow.connect(self.registryDisonnect)
 
     def layerFromRegistry(self):
         all_attrs = list()
         self.dlg.currentLayers.clear()
-        root = QgsProject.instance().layerTreeRoot()
+        root = self.root
+        registry = self.registry
         for node in root.children():
             if len(node.children()) > 0:
                 pWidget = QTreeWidgetItem(self.dlg.currentLayers, node.name())
@@ -59,10 +64,14 @@ class contourPlot:
                 attrName = node.name()
                 all_attrs.append(attrName)
                 attrLayerId = node.layerId()
-                pWidget = layerItem(self.dlg.currentLayers, attrName,
-                                    attrLayerId)
-                pWidget.setCheckState(0, Qt.Unchecked)
-                self.dlg.currentLayers.addTopLevelItem(pWidget)
+
+                layer = registry.mapLayer(attrLayerId)
+                if layer.type() == QgsMapLayer.RasterLayer:
+                    pWidget = layerItem(self.dlg.currentLayers, attrName,
+                                        attrLayerId)
+                    pWidget.setCheckState(0, Qt.Unchecked)
+                    self.dlg.currentLayers.addTopLevelItem(pWidget)
+
         all_attrs = set(all_attrs)
         all_attrs = list(all_attrs)
         self.dlg.attributeBox.clear()
@@ -153,13 +162,86 @@ class contourPlot:
                 if not p_item.outputFolder:
                     p_item.outputFolder = assignedFolder
 
+    def genContour(self, folder, layer, layerName):
+
+        provider = layer.dataProvider()
+        extent = layer.extent()
+        stats = provider.bandStatistics(1, QgsRasterBandStats.All, extent, 0)
+        minVal = stats.minimumValue
+        maxVal = stats.maximumValue
+
+        interval = (maxVal - minVal)/10.
+        rasDataSet = gdal.Open(layer.source(), GA_ReadOnly)
+        layerCrs = layer.crs()
+
+        # Get the no data value:
+        rows = layer.rasterUnitsPerPixelY()
+        cols = layer.rasterUnitsPerPixelX()
+        noDataVal = provider.block(1, extent,  rows, cols).noDataValue()
+
+        # Generate layer to save Contourlines in
+        ogr_ds = ogr.GetDriverByName("ESRI Shapefile").CreateDataSource(
+            os.path.join(folder, str(layerName)+'.shp'))
+        contour_shp = ogr_ds.CreateLayer(str(layerName),
+                                         geom_type=ogr.wkbLineString25D)
+
+        field_defn = ogr.FieldDefn("ID", ogr.OFTInteger)
+        contour_shp.CreateField(field_defn)
+        field_defn = ogr.FieldDefn("VALUE", ogr.OFTReal)
+        contour_shp.CreateField(field_defn)
+
+        try:
+            self.iface.messageBar().pushMessage('Generate Contour of ' +
+                                                layerName)
+            gdal.ContourGenerate(rasDataSet.GetRasterBand(1), interval, 0, [],
+                                 0, noDataVal, contour_shp, 0, 1)
+            conLayer = self.iface.addVectorLayer(
+                os.path.join(folder, str(layerName)+'.shp'),
+                str(layerName) + '_contour',
+                'ogr')
+            conLayer.setCrs(layerCrs)
+
+        except Exception, e:
+            self.iface.messageBar().pushMessage(str(e))
+
+        ogr_ds = None
+        del ogr_ds
+
     def exportContour(self):
-        pass
+        for i in range(0, self.dlg.layersToDraw.topLevelItemCount()):
+            p_item = self.dlg.layersToDraw.topLevelItem(i)
+            if p_item.childCount() > 0:
+                for j in range(0, p_item.childCount()):
+                    c_item = p_item.child(j)
+                    folder = c_item.outputFolder
+                    registry = QgsMapLayerRegistry.instance()
+                    layer = registry.mapLayer(c_item.layerId)
+                    layerName = p_item.text(0) + '_' + layer.text(0)
+                    if os.path.isdir(folder):
+                        self.genContour(folder, layer, layerName)
+                    else:
+                        os.makedirs(folder)
+                        self.genContour(folder, layer, layerName)
+            else:
+                folder = p_item.outputFolder
+                registry = QgsMapLayerRegistry.instance()
+                layer = registry.mapLayer(p_item.layerId)
+                layerName = p_item.text(0) + '_' + p_item.text(0)
+                if os.path.isdir(folder):
+                    self.genContour(folder, layer, layerName)
+                else:
+                    os.makedirs(folder)
+                    self.genContour(folder, layer, layerName)
+
+    def registryDisonnect(self):
+        self.registry.legendLayersAdded.disconnect()
 
     def run(self):
         self.dlg.show()
         self.layerFromRegistry()
+        self.registry.legendLayersAdded.connect(self.layerFromRegistry)
         result = self.dlg.exec_()
         if result == 1:
             folder = QFileDialog.getExistingDirectory()
             self.setOutputDir(folder)
+            self.exportContour()

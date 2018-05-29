@@ -33,6 +33,7 @@ from .TECSettings.TECSettings import TECSettings as TecSettings
 from .tools.TECfile import TECfile, TEClayerBox
 from .profile.profilePlot import profilePlot
 from .contour.contourPlot import contourPlot
+from .makeKml.kmlExport import kmlExport
 import os
 import re
 import resources
@@ -95,6 +96,7 @@ class TECView:
 
         self.profiler = profilePlot(self.iface)
         self.contourPlot = contourPlot(self.iface)
+        self.makeKml = kmlExport(self.iface)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -198,6 +200,12 @@ class TECView:
             icon_path,
             text=self.tr(u'Plot Contour'),
             callback=self.contourPlot.run,
+            parent=self.iface.mainWindow())
+
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Export to .kml'),
+            callback=self.makeKml.run,
             parent=self.iface.mainWindow())
 
     def unload(self):

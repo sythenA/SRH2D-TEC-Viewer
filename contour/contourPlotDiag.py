@@ -1,6 +1,7 @@
 
 import os
 from qgis.PyQt import QtGui, uic
+from qgis.PyQt.QtCore import pyqtSignal
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -8,6 +9,8 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class contourGenDialog(QtGui.QDialog, FORM_CLASS):
+    closeWindow = pyqtSignal()
+
     def __init__(self, parent=None):
         """Constructor."""
         super(contourGenDialog, self).__init__(parent)
@@ -19,3 +22,6 @@ class contourGenDialog(QtGui.QDialog, FORM_CLASS):
         self.setupUi(self)
         self.currentLayers.setItemHidden(self.currentLayers.headerItem(), True)
         self.layersToDraw.setItemHidden(self.layersToDraw.headerItem(), True)
+
+    def closeEvent(self, event):
+        self.closeWindow.emit()
