@@ -3,7 +3,7 @@ import os
 import subprocess
 import pip
 from conExportDialog import conExportDiag
-from qgis.core import QgsMapLayerRegistry, QgsMapLayer, QGis
+from qgis.core import QgsMapLayerRegistry, QGis, QgsMapLayer
 from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform
 from qgis.PyQt.QtGui import QListWidgetItem, QFileDialog
 from qgis.PyQt.QtCore import Qt
@@ -82,23 +82,30 @@ class kmlExport:
         for layerId in layers.keys():
             layer = self.registry.mapLayer(layerId)
             if layer.LayerType() == QgsMapLayer.VectorLayer:
-                if layer.geometryType() == QGis.Line:
-                    conItem = contourLayerItem(layer.name(), self.registry,
-                                               layerId)
-                    conItem.getConLevel()
-                    self.dlg.conLayerList.addItem(conItem)
+                try:
+                    if layer.geometryType() == QGis.Line:
+                        conItem = contourLayerItem(layer.name(), self.registry,
+                                                   layerId)
+                        conItem.getConLevel()
+                        self.dlg.conLayerList.addItem(conItem)
+                except:
+                    pass
+            else:
+                pass
 
     def run(self):
         self.dlg.show()
         self.updateLayers()
-        self.registry.legendLayersAdded.connect(self.updateLayers)
+        self.registry.layersAdded.connect(self.updateLayers)
+        self.registry.layerRemoved.connect(self.updateLayers)
         result = self.dlg.exec_()
         if result == 1:
             folder = QFileDialog.getExistingDirectory()
             self.exportItems(folder)
 
     def breakConnection(self):
-        self.registry.legendLayersAdded.disconnect()
+        self.registry.layersAdded.disconnect()
+        self.registry.layersRemoved.disconnect()
 
     def exportItems(self, folder):
         for i in range(0, self.dlg.conLayerList.count()):

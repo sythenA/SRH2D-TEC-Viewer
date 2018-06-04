@@ -31,9 +31,6 @@ class contourPlot:
         self.root = QgsProject.instance().layerTreeRoot()
         self.registry = QgsMapLayerRegistry.instance()
 
-        registry = QgsMapLayerRegistry.instance()
-        registry.layerRemoved.connect(self.layerFromRegistry)
-
         self.dlg.attrSelectBtn.clicked.connect(self.attrSelected)
         self.dlg.layersAddBtn.clicked.connect(self.addToGenContour)
         self.dlg.layersDeleteBtn.clicked.connect(self.removeFromAdded)
@@ -234,12 +231,14 @@ class contourPlot:
                     self.genContour(folder, layer, layerName)
 
     def registryDisonnect(self):
-        self.registry.legendLayersAdded.disconnect()
+        self.registry.layersAdded.disconnect()
+        self.registry.layersRemoved.disconnect()
 
     def run(self):
         self.dlg.show()
         self.layerFromRegistry()
-        self.registry.legendLayersAdded.connect(self.layerFromRegistry)
+        self.registry.layersAdded.connect(self.layerFromRegistry)
+        self.registry.layerRemoved.connect(self.layerFromRegistry)
         result = self.dlg.exec_()
         if result == 1:
             folder = QFileDialog.getExistingDirectory()
