@@ -80,7 +80,8 @@ class contourPlot:
         for i in range(0, self.dlg.currentLayers.topLevelItemCount()):
             item = self.dlg.currentLayers.topLevelItem(i)
             if not type(item) == layerItem:
-                for cWidget in item.children():
+                for i in range(0, item.childCount()):
+                    cWidget = item.child(i)
                     if c_attr in cWidget.text(0):
                         cWidget = changeCheckState(cWidget)
 
@@ -213,7 +214,7 @@ class contourPlot:
                     folder = c_item.outputFolder
                     registry = QgsMapLayerRegistry.instance()
                     layer = registry.mapLayer(c_item.layerId)
-                    layerName = p_item.text(0) + '_' + layer.text(0)
+                    layerName = p_item.text(0) + '_' + layer.name()
                     if os.path.isdir(folder):
                         self.genContour(folder, layer, layerName)
                     else:
