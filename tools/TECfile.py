@@ -10,11 +10,16 @@ from qgis.core import QgsRasterShader
 from osgeo import osr, gdal
 from gdalconst import GA_Update
 from PyQt4.QtCore import QVariant, QFileInfo
-from math import ceil
+from math import ceil, sqrt
+from shapely.ops import cascaded_union, polygonize
+import numpy as np
+from scipy.spatial import Delaunay
+from scipy.interpolate import griddata
 import re
 import subprocess
 import os
 import processing
+import shapely.geometry as geometry
 
 
 class TECfile(QListWidgetItem):
@@ -51,9 +56,110 @@ class TECfile(QListWidgetItem):
             if float(self.variables[3]['Water_Elev_m'][i]) == -999.0:
                 self.variables[3][
                     'Water_Elev_m'][i] = self.variables[2]['Bed_Elev_meter'][i]
-        self.makeMeshLayer()
-        self.makeSieve()
-        self.genNodeLayer()
+
+        Xkey = self.variables[0].keys()[0]
+        X = self.toFloat(self.variables[0][Xkey])
+        self.Xmax = max(X)
+        self.Xmin = min(X)
+        Ykey = self.variables[1].keys()[0]
+        Y = self.toFloat(self.variables[1][Ykey])
+        self.Ymax = max(Y)
+        self.Ymin = min(Y)
+
+        #  ########  Make Othogonal Grid Points  #########
+        points2 = geometry.MultiPoint(list(zip(X, Y)))
+        concave_hull2, edge_points2 = self.alpha_shape(points2, alpha=0.01)
+        self.hull = concave_hull2
+        reso = float(self.setting['resolution'])
+        self.reso = reso
+
+        X_coordinate = np.arange(self.Xmin, self.Xmax+0.001, reso)
+        Y_coordinate = np.arange(self.Ymax, self.Ymin, -reso)
+        self.Nx = len(X_coordinate)
+        self.Ny = len(Y_coordinate)
+        X_ref, Y_ref = np.meshgrid(X_coordinate, Y_coordinate)
+        self.X_ref = X_ref
+        self.Y_ref = Y_ref
+
+        widx = np.zeros([self.Ny, self.Nx])
+
+        # Identify points inside mesh area
+        for i in range(0, len(X_ref)):
+            for j in range(0, len(X_ref[0])):
+                widx[i, j] = self.within_polygon(
+                    geometry.Point(X_ref[i, j], Y_ref[i, j]), concave_hull2, 0)
+        self.widx = widx
+
+        # self.makeMeshLayer()
+        # self.makeSieve()
+        # self.genNodeLayer()
+
+    def alpha_shape(self, points, alpha):
+        """
+        Compute the alpha shape (concave hull) of a set of points.
+
+        @param points: Iterable container of points.
+        @param alpha: alpha value to influence the gooeyness of the border.
+                      Smaller numbers don't fall inward as much as larger
+                      numbers. Too large, and you lose everything!
+        """
+        if len(points) < 4:
+            # When you have a triangle, there is no sense in computing an alpha
+            # shape.
+            return geometry.MultiPoint(list(points)).convex_hull
+
+        def add_edge(edges, edge_points, coords, i, j):
+            """Add a line between the i-th and j-th points, if not in the list
+            already"""
+            if (i, j) in edges or (j, i) in edges:
+                # already added
+                return
+            edges.add((i, j))
+            edge_points.append(coords[[i, j]])
+
+        coords = np.array([point.coords[0] for point in points])
+
+        tri = Delaunay(coords)
+        edges = set()
+        edge_points = []
+        # loop over triangles:
+        # ia, ib, ic = indices of corner points of the triangle
+        for ia, ib, ic in tri.vertices:
+            pa = coords[ia]
+            pb = coords[ib]
+            pc = coords[ic]
+
+            # Lengths of sides of triangle
+            a = sqrt((pa[0]-pb[0])**2 + (pa[1]-pb[1])**2)
+            b = sqrt((pb[0]-pc[0])**2 + (pb[1]-pc[1])**2)
+            c = sqrt((pc[0]-pa[0])**2 + (pc[1]-pa[1])**2)
+
+            # Semiperimeter of triangle
+            s = (a + b + c)/2.0
+
+            # Area of triangle by Heron's formula
+            area = sqrt(s*(s - a)*(s - b)*(s - c))
+            try:
+                circum_r = a*b*c/(4.0*area)
+            except(ZeroDivisionError):
+                circum_r = 0
+
+            # Here's the radius filter.
+            # print circum_r
+            if circum_r < 1.0/alpha:
+                add_edge(edges, edge_points, coords, ia, ib)
+                add_edge(edges, edge_points, coords, ib, ic)
+                add_edge(edges, edge_points, coords, ic, ia)
+
+        m = geometry.MultiLineString(edge_points)
+        triangles = list(polygonize(m))
+        return cascaded_union(triangles), edge_points
+
+    def within_polygon(self, grid_point, concave_hull, buffer):
+        intw = 0
+        if grid_point.within(concave_hull.buffer(buffer)):
+            intw = 1
+        return intw
 
     def export(self):
         self.outDir = os.path.join(self.outDir,
@@ -72,8 +178,9 @@ class TECfile(QListWidgetItem):
 
         self.contentLayers = list()
         for attr in self.attributes:
+            idx = self.attributes.index(attr) + 2
             if attr[1] == 1:
-                self.makeContentLayers(attr[0])
+                self.makeContentLayers(attr[0], idx)
                 if len(attr[0]) > 10:
                     rasterName = attr[0][0:10]
                 else:
@@ -128,8 +235,8 @@ class TECfile(QListWidgetItem):
         ZONE = list()
         DT = list()
 
-        title, _variables, ZONE, DT, lineCount = readDat(dat, title, _variables,
-                                                         ZONE, DT)
+        title, _variables, ZONE, DT, lineCount = readDat(
+            dat, title, _variables, ZONE, DT)
 
         self.headerLinesCount = lineCount
 
@@ -169,7 +276,7 @@ class TECfile(QListWidgetItem):
         DTstring = DTstring.replace(' DT=(', '')
         DTstring = DTstring.replace(' \n', '')
         DTstring = DTstring.replace(')\n', '')
-        vtype = re.split('\s', DTstring.strip())
+        vtype = re.split(r'\s', DTstring.strip())
         self.variableType = vtype
 
     def readVariables(self, dat):
@@ -201,16 +308,15 @@ class TECfile(QListWidgetItem):
                 mesh.append(polygon)
         self.mesh = mesh
 
+    def toFloat(self, array):
+        for i in range(0, len(array)):
+            array[i] = float(array[i])
+
+        return array
+
     def makeMeshLayer(self):
         mesh = self.mesh
-        Xkey = self.variables[0].keys()[0]
-        X = self.variables[0][Xkey]
-        self.Xmax = max(X)
-        self.Xmin = min(X)
-        Ykey = self.variables[1].keys()[0]
-        Y = self.variables[1][Ykey]
-        self.Ymax = max(Y)
-        self.Ymin = min(Y)
+        #  ########  Make Polygon Mesh Layer  ##########
         c_folder = self.outDir
         crs = self.crs
         path = os.path.join(c_folder, 'mesh.shp')
@@ -230,7 +336,7 @@ class TECfile(QListWidgetItem):
             else:
                 polygon.append(polygon[0])
             for node in polygon:
-                geoString += (X[node-1] + " " + Y[node-1] + ",")
+                geoString += (str(X[node-1]) + " " + str(Y[node-1]) + ",")
             geoString = geoString[:-1] + "))"
             feature.setGeometry(QgsGeometry.fromWkt(geoString))
             feature.setAttributes([feat_id, 1])
@@ -315,12 +421,16 @@ class TECfile(QListWidgetItem):
         nodeLayer = QgsVectorLayer(path, QFileInfo(path).baseName(), 'ogr')
         self.nodeLayer = nodeLayer
 
-    def makeContentLayers(self, fieldKey):
-        xmin = float(self.Xmin)
-        xmax = float(self.Xmax)
-        ymin = float(self.Ymin)
-        ymax = float(self.Ymax)
+    def makeContentLayers(self, fieldKey, idx):
         c_folder = self.outDir
+
+        # original grid data
+        Xkey = self.variables[0].keys()[0]
+        X = self.toFloat(self.variables[0][Xkey])
+        Ykey = self.variables[1].keys()[0]
+        Y = self.toFloat(self.variables[1][Ykey])
+        ZKey = self.variables[idx].keys()[0]
+        Z = self.toFloat(self.variables[idx][ZKey])
 
         if len(fieldKey) > 10:
             fieldName = fieldKey[0:10]
@@ -328,46 +438,43 @@ class TECfile(QListWidgetItem):
             fieldName = fieldKey
 
         rasterName = fieldName
-        self.iface.messageBar().pushMessage('Loading ' + fieldName + ' from ' +
-                                            self.nodeLayer.name())
-        processing.runalg('grass7:v.surf.rst',
-                          {'input': self.nodeLayer,
-                           'where': '',
-                           'mask': self.sieveLayer,
-                           'zcolumn': fieldName,
-                           'tension': 40.0,
-                           'segmax': 40.0,
-                           'npmin': 300.0,
-                           'dmin': float(self.setting['min_Dist']),
-                           'dmax': 2.50,
-                           'zscale': 1.0,
-                           'theta': 0.0,
-                           'scalex': 0.0,
-                           '-t': False,
-                           '-d': False,
-                           'GRASS_REGION_PARAMETER':
-                           "%f,%f,%f,%f" % (xmin, xmax, ymin, ymax),
-                           'GRASS_REGION_CELLSIZE_PARAMETER':
-                           float(self.setting['resolution']),
-                           'GRASS_SNAP_TOLERANCE_PARAMETER': -1.0,
-                           'GRASS_MIN_AREA_PARAMETER': 1.0e-4,
-                           'elevation': os.path.join(c_folder, rasterName),
-                           'slope': os.path.join(
-                               os.path.join(c_folder, 'supplements'),
-                               rasterName + '-slope'),
-                           'aspect': os.path.join(
-                               os.path.join(c_folder, 'supplements'),
-                               rasterName + '-aspect'),
-                           'pcurvature': os.path.join(
-                               os.path.join(c_folder, 'supplements'),
-                               rasterName + '-pcurv'),
-                           'tcurvature': os.path.join(
-                               os.path.join(c_folder, 'supplements'),
-                               rasterName + '-tcurv'),
-                           'mcurvature': os.path.join(
-                               os.path.join(c_folder, 'supplements'),
-                               rasterName + '-mcurv')
-                           })
+
+        X_ref = self.X_ref
+        Y_ref = self.Y_ref
+        widx = self.widx
+
+        driver = gdal.GetDriverByName('GTiff')
+        dst_filename = os.path.join(c_folder, rasterName+'.tif')
+        dataset = driver.Create(dst_filename, self.Nx, self.Ny, 1,
+                                gdal.GDT_Float32)
+
+        dataset.SetProjection(str(self.crs.toWkt()))
+        geotransform = (self.Xmin, self.reso, 0, self.Ymax, 0, -self.reso)
+        dataset.SetGeoTransform(geotransform)
+
+        ValueArray = np.zeros([self.Ny, self.Nx])
+
+        # Interpolate on grid data using new orthogonal grids coordinate
+        points = list()
+        for i in range(0, len(X_ref)):
+            points = points + zip(X_ref[i, :], Y_ref[i, :])
+
+        Values = griddata(zip(X, Y), Z, points)
+
+        for i in range(0, len(X_ref)):
+            ValueArray[i, :] = Values[i*self.Nx: (i+1)*self.Nx]
+
+        for i in range(0, len(widx)):
+            for j in range(0, len(widx[i])):
+                if int(widx[i, j]) == 0:
+                    ValueArray[i, j] = -9999
+
+        # ######  Create Empty geotiff  ######
+
+        band = dataset.GetRasterBand(1)
+        band.SetNoDataValue(-9999)  # Set no data value to -9999 in raster file
+        band.WriteArray(ValueArray)
+        dataset.FlushCache()
 
 
 class TEClayerBox:
