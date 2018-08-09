@@ -1,11 +1,11 @@
 
-import os
 from qgis.gui import QgsMapTool
-from qgis.core import QGis, QgsPoint
-from qgis.PyQt.QtCore import pyqtSignal, Qt
+from qgis.core import QGis, QgsPoint, QgsGeometry
+from qgis.PyQt.QtCore import pyqtSignal, Qt, QObject, SIGNAL
 import qgis.core
 from qgis.PyQt.QtGui import QCursor
 from callMapTool import profileSec
+from selectlinetool import SelectLineTool
 
 
 class plotCSTool:
@@ -37,7 +37,7 @@ click to cancel then quit)"
         self.previousLayer = None                         # for selection mode
 
 
-# ************************ Mouse listener actions ******************************
+# ************************ Mouse listener actions *****************************
 
     def moved(self, position):
         # draw the polyline on the temp layer (rubberband)
@@ -64,11 +64,6 @@ click to cancel then quit)"
                 QgsPoint(mapPos.x(), mapPos.y()))
 
     def rightClicked(self, position):    # used to quit the current action
-        mapPos = self.canvas.getCoordinateTransform().toMapCoordinates(
-            position["x"], position["y"])
-        newPoints = [[mapPos.x(), mapPos.y()]]
-        # if newPoints == self.lastClicked:
-        # return # sometimes a strange "double click" is given
         if len(self.pointstoDraw) > 0:
             self.pointstoDraw = []
             self.pointstoCal = []
@@ -95,21 +90,27 @@ click to cancel then quit)"
                     self.profilePlotMain.polygon)
                 self.profilePlotMain.rubberbandbuf.reset()
             self.pointstoDraw += newPoints
+
+    def leftClicked2(self, position):
+        self.profilePlotMain.rubberband.reset()
+        mapPos = self.canvas.getCoordinateTransform().toMapCoordinates(
+            position["x"], position["y"])
+        newPoints = [[mapPos.x(), mapPos.y()]]
+
+        result = SelectLineTool().getPointTableFromSelectedLine(
+            self.iface, self.tool, newPoints)
+
+        selectedFeatures = result[1]
+        newlyAddedFeature = selectedFeatures[0]
         """
-        if self.profilePlotMain.dockwidget.selectionmethod == 1:
-            result = SelectLineTool().getPointTableFromSelectedLine(
-                self.iface, self.tool, newPoints, self.layerindex,
-                self.previousLayer, self.pointstoDraw)
-            self.pointstoDraw = result[0]
-            self.layerindex = result[1]
-            self.previousLayer = result[2]
-            # self.profilePlotMain.calculateProfil(self.pointstoDraw,
-            # self.mdl,self.plotlibrary, False)
-            self.profilePlotMain.calculateProfil(self.pointstoDraw, False)
-            self.lastFreeHandPoints = self.pointstoDraw
-            self.pointstoDraw = []
-            self.iface.mainWindow().statusBar().showMessage(self.textquit1)
-            """
+        for point in newlyAddedFeature.geometry().asPolyline():
+            self.profilePlotMain.rubberband.addPoint(point)"""
+        featureGeometry = newlyAddedFeature.geometry().asPolyline()
+        self.profilePlotMain.rubberband.addGeometry(
+            QgsGeometry.fromPolyline(featureGeometry),
+            self.iface.activeLayer())
+        self.profileSec.updateProfileFromFeatures(result[0], result[1],
+                                                  self.tool)
 
     def doubleClicked(self, position):
         self.profilePlotMain.dlg.activeLayerList.clear()
@@ -162,19 +163,56 @@ click to cancel then quit)"
         self.tool.desactivate.connect(self.deactivate)
         self.profilePlotMain.dlg.reActivateBtn.clicked.connect(self.reActivate)
 
-        self.iface.mainWindow().statusBar().showMessage(self.textquit0)
-
     def deactivate(self):        # enable clean exit of the plugin
-
-        self.tool.moved.disconnect(self.moved)
-        self.tool.rightClicked.disconnect(self.rightClicked)
-        self.tool.leftClicked.disconnect(self.leftClicked)
-        self.tool.doubleClicked.disconnect(self.doubleClicked)
-        self.tool.desactivate.disconnect(self.deactivate)
+        try:
+            self.tool.moved.disconnect()
+        except(TypeError):
+            pass
+        try:
+            self.tool.rightClicked.disconnect()
+        except(TypeError):
+            pass
+        try:
+            self.tool.doubleClicked.disconnect()
+        except(TypeError):
+            pass
+        self.tool.leftClicked.disconnect()
+        self.tool.desactivate.disconnect()
         self.profilePlotMain.rubberbandpoint.hide()
         self.profilePlotMain.rubberband.reset(self.profilePlotMain.polygon)
 
         self.iface.mainWindow().statusBar().showMessage("")
+
+    def selectFromLayer(self):
+        self.tool.leftClicked.connect(self.leftClicked2)
+
+    def changeToSelectLine(self):
+        try:
+            self.tool.moved.disconnect()
+        except(TypeError):
+            pass
+        try:
+            self.tool.rightClicked.disconnect()
+        except(TypeError):
+            pass
+        try:
+            self.tool.leftClicked.disconnect()
+        except(TypeError):
+            pass
+        try:
+            self.tool.doubleClicked.disconnect()
+        except(TypeError):
+            pass
+        self.profilePlotMain.rubberbandbuf.reset()
+
+        self.tool.leftClicked.connect(self.leftClicked2)
+
+    def changeToHandDraw(self):
+        self.tool.moved.connect(self.moved)
+        self.tool.rightClicked.connect(self.rightClicked)
+        self.tool.leftClicked.connect(self.leftClicked)
+        self.tool.doubleClicked.connect(self.doubleClicked)
+        self.profilePlotMain.rubberbandpoint.show()
 
 
 class profilePlotMainMapTool(QgsMapTool):
@@ -196,7 +234,8 @@ class profilePlotMainMapTool(QgsMapTool):
 
     def canvasReleaseEvent(self, event):
         if event.button() == Qt.RightButton:
-            self.rightClicked.emit({'x': event.pos().x(), 'y': event.pos().y()})
+            self.rightClicked.emit({'x': event.pos().x(),
+                                    'y': event.pos().y()})
         else:
             self.leftClicked.emit({'x': event.pos().x(), 'y': event.pos().y()})
 

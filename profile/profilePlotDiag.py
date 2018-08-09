@@ -4,7 +4,7 @@ from PyQt4.Qwt5 import QwtPlot, QwtPlotZoomer, QwtPicker, QwtPlotPicker
 from PyQt4.Qwt5 import QwtPlotGrid
 from qgis.PyQt.QtCore import Qt, QSize, pyqtSignal
 from qgis.PyQt.QtGui import QSizePolicy, QPen, QColor, QStandardItemModel
-from .plotTool import plotTool
+from qgis.gui import QgsMapLayerComboBox, QgsMapLayerProxyModel
 import os
 
 
@@ -22,8 +22,18 @@ class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
         self.TecFileList.setItemHidden(self.TecFileList.headerItem(), True)
         self.TecFileList.clear()
         self.setPlotWidget()
+        self.setLayerBoxWidget()
+        self.layerCombo.setEnabled(False)
         self.mdl = QStandardItemModel(0, 6)
         self.resetBtn.clicked.connect(self.setRescale)
+        self.methodSelector.currentIndexChanged.connect(
+            self.lockMapLayerSelector)
+
+    def lockMapLayerSelector(self, idx):
+        if idx == 0:
+            self.layerCombo.setEnabled(False)
+        elif idx == 1:
+            self.layerCombo.setEnabled(True)
 
     def setPlotWidget(self):
         self.plotWidget = QwtPlot(self.plotFrame)
@@ -55,6 +65,12 @@ class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
 
         layout = self.plotLayout
         layout.addWidget(self.plotWidget)
+
+    def setLayerBoxWidget(self):
+        self.layerCombo = QgsMapLayerComboBox()
+        self.layerCombo.setFilters(QgsMapLayerProxyModel.LineLayer)
+        layout = self.layerComboLayout
+        layout.addWidget(self.layerCombo)
 
     def setRescale(self):
         self.plotWidget.setAxisAutoScale(0)

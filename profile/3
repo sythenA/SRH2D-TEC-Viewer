@@ -3,7 +3,7 @@ import os
 from qgis.gui import QgsRubberBand, QgsVertexMarker
 from qgis.core import QgsMapLayer, QgsProject, QgsMapLayerRegistry, QgsPoint
 from qgis.core import QgsPointXY
-from qgis.PyQt.QtCore import Qt, QT_VERSION_STR, QSize, QLine, QRect
+from qgis.PyQt.QtCore import Qt, QSettings, QT_VERSION_STR, QSize, QLine, QRect
 from qgis.PyQt.QtGui import QWidget, QColor, QListWidgetItem, QPen, QBrush
 from qgis.PyQt.QtGui import QPainter, QPixmap, QIcon
 from qgis.PyQt.QtSvg import QSvgGenerator
@@ -39,13 +39,13 @@ class profileSec(QWidget):
         self.dlg.activeLayerList.itemDoubleClicked.connect(
             self.changeCurveStyle)
 
-    def getProfile(self, pointstoDraw, toolRenderer):
+    def getProfile(self, points1, toolRenderer):
         self.rubberbandbuf.reset()
-        self.pointstoDraw = pointstoDraw
+        self.pointstoDraw = points1
 
         # self.prepar_points(self.pointstoDraw)   # for mouse tracking
         # self.removeClosedLayers(self.dlg.mdl)
-        if pointstoDraw is None:
+        if self.pointstoDraw is None:
             return
 
         plotTool().clearData(self.dlg.plotWidget, self.profiles)
@@ -56,8 +56,7 @@ class profileSec(QWidget):
         # calculate profiles
         for i in range(0, len(layersList)):
             if layersList[i].type() == QgsMapLayer.VectorLayer:
-                vec_profile, buffer, multipoly = DataReaderTool(
-                ).dataVectorReaderTool(
+                vec_profile, buffer, multipoly = DataReaderTool().dataVectorReaderTool(
                     self.iface, toolRenderer, layersList[i],
                     self.pointstoDraw)
                 self.profiles.append(vec_profile)
@@ -130,8 +129,7 @@ class profileSec(QWidget):
                     layerItem = TECitem.child(j)
                     if layerItem.checkState(0) == Qt.Checked:
                         layerId = layerItem.layerId
-                        layer = QgsMapLayerRegistry.instance().mapLayer(
-                            layerId)
+                        layer = QgsMapLayerRegistry.instance().mapLayer(layerId)
                         activeLayers.append(layer)
                         TECfiles.append(TECName)
             else:
@@ -152,10 +150,6 @@ class profileSec(QWidget):
         This function also manages selection/deselection of features in the
         active layer to highlight the feature being profiled.
         """
-        self.rubberbandbuf.reset()
-        plotTool().clearData(self.dlg.plotWidget, self.profiles)
-        self.dlg.activeLayerList.clear()
-
         pointstoDraw = []
 
         """

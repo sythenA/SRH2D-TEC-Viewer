@@ -147,7 +147,7 @@ class DataReaderTool:
 
         return self.profiles
 
-    def dataVectorReaderTool(self, iface1, tool1, layer, pointstoDraw1):
+    def dataVectorReaderTool(self, iface, tool1, layer, pointstoDraw1):
         """
         compute the projected points
         return :
@@ -175,13 +175,13 @@ class DataReaderTool:
 
         """
         layercrs = layer.crs()
-        mapcanvascrs = self.iface.mapCanvas().mapSettings().destinationCrs()
+        mapcanvascrs = iface.mapCanvas().mapSettings().destinationCrs()
 
         projectedpoints = []
         buffergeom = None
 
         sourceCrs = QgsCoordinateReferenceSystem(
-            self.iface.mapCanvas().mapSettings().destinationCrs())
+            iface.mapCanvas().mapSettings().destinationCrs())
         destCrs = QgsCoordinateReferenceSystem(layercrs)
         xform = QgsCoordinateTransform(sourceCrs, destCrs)
         xformrev = QgsCoordinateTransform(destCrs, sourceCrs)
@@ -232,10 +232,14 @@ class DataReaderTool:
         # Preparing return value
         profile = {}
         profile.update("layer", layer)
-        profile.update('l', [projectedpoint[0] for projectedpoint in projectedpoints])
-        profile.update('z', [projectedpoint[5] for projectedpoint in projectedpoints])
-        profile.update('x', [projectedpoint[1] for projectedpoint in projectedpoints])
-        profile.update('y', [projectedpoint[2] for projectedpoint in projectedpoints])
+        profile.update(
+            'l', [projectedpoint[0] for projectedpoint in projectedpoints])
+        profile.update(
+            'z', [projectedpoint[5] for projectedpoint in projectedpoints])
+        profile.update(
+            'x', [projectedpoint[1] for projectedpoint in projectedpoints])
+        profile.update(
+            'y', [projectedpoint[2] for projectedpoint in projectedpoints])
 
         multipoly = QgsGeometry.fromMultiPolyline(
             [[xform.transform(QgsPoint(projectedpoint[1], projectedpoint[2]),
@@ -274,7 +278,8 @@ class DataReaderTool:
                         duplicate += minindex.tolist()
                         projectedpointsfinal.append(projectedpoints[i])
 
-                    # duplicate lenght with different altitude: keep the closest
+                    # duplicate lenght with different altitude: keep the
+                    # closest
                     mindistindex = np.setdiff1d(mindistindex[0],
                                                 minindex, assume_unique=True)
                 else:

@@ -3,38 +3,22 @@
 from PyQt4.QtCore import QSettings, Qt, QSize
 from PyQt4.QtGui import QPrinter, QPrintDialog, QPixmap, QFileDialog
 from PyQt4.QtSvg import QSvgGenerator
-from math import sqrt
 
-from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotMarker, QwtPlotItem, QwtPlot
+from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotItem, QwtPlot
 import itertools  # only needed for Qwt plot
 import os
 
 
 class plotTool:
-    def drawVertLine(self, wdg, pointstoDraw):
-        profileLen = 0
-        for i in range(0, len(pointstoDraw)-1):
-            x1 = float(pointstoDraw[i][0])
-            y1 = float(pointstoDraw[i][1])
-            x2 = float(pointstoDraw[i+1][0])
-            y2 = float(pointstoDraw[i+1][1])
-            profileLen = (sqrt(((x2-x1)*(x2-x1)) + ((y2-y1)*(y2-y1))) +
-                          profileLen)
-            vertLine = QwtPlotMarker()
-            vertLine.setLineStyle(QwtPlotMarker.VLine)
-            vertLine.setXValue(profileLen)
-            vertLine.attach(wdg)
-        profileLen = 0
-
     def attachCurves(self, wdg, profiles):
         for i in range(0, len(profiles)):
             tmp_name = ("%s") % (profiles[i]["layer"].name())
 
-            # As QwtPlotCurve doesn't support nodata, split the data into single
-            # lines
+            # As QwtPlotCurve doesn't support nodata, split the data into
+            # single lines
             # with breaks wherever data is None.
-            # Prepare two lists of coordinates (xx and yy). Make x=None whenever
-            # y is None.
+            # Prepare two lists of coordinates (xx and yy). Make x=None
+            # whenever y is None.
             xx = profiles[i]["l"]
             yy = profiles[i]["z"]
             for j in range(len(yy)):

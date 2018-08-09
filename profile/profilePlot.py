@@ -21,6 +21,7 @@ class profilePlot(QWidget):
         #  ---Signals Connections---
         self.dlg.TecFileList.itemChanged.connect(self.setLayerState)
         self.dlg.TecFileList.itemActivated.connect(self.setToActive)
+        self.registry = QgsMapLayerRegistry.instance()
 
         self.iface = iface
 
@@ -49,6 +50,8 @@ class profilePlot(QWidget):
         # profile settings
         registry = QgsMapLayerRegistry.instance()
         registry.legendLayersAdded.connect(self.layerFromRegistry)
+        self.dlg.methodSelector.currentIndexChanged.connect(
+            self.changeOfMethod)
 
     def activateDrawProfileCS(self):
         # Save the standard mapttool for restoring it at the end
@@ -83,10 +86,12 @@ class profilePlot(QWidget):
         root = QgsProject.instance().layerTreeRoot()
         for node in root.children():
             if len(node.children()) > 0:
-                pWidget = QTreeWidgetItem(self.dlg.TecFileList, node.name())
+                pWidget = QTreeWidgetItem(self.dlg.TecFileList)
+                pWidget.setText(0, str(node.name()))
                 for layer in node.children():
-                    if layer.layer().layerType() == QgsMapLayer.RasterLayer():
-                        attrName = layer.name()
+                    _layer = self.registry.mapLayer(layer.layerId())
+                    if _layer.type() == QgsMapLayer.RasterLayer:
+                        attrName = _layer.name()
                         attrLayerId = layer.layerId()
 
                         cWidget = layerItem(pWidget, attrName, attrLayerId)
@@ -94,13 +99,34 @@ class profilePlot(QWidget):
                 self.dlg.TecFileList.addTopLevelItem(pWidget)
             else:
                 attrName = node.name()
-                attrLayerId = node.layerId()
-                pWidget = layerItem(self.dlg.TecFileList, attrName, attrLayerId)
-                self.dlg.TecFileList.addTopLevelItem(pWidget)
+                try:
+                    attrLayerId = node.layerId()
+                    layer = self.registry.mapLayer(attrLayerId)
+                    if layer.type() == QgsMapLayer.RasterLayer:
+                        pWidget = layerItem(self.dlg.TecFileList, attrName,
+                                            attrLayerId)
+                        self.dlg.TecFileList.addTopLevelItem(pWidget)
+
+                except(AttributeError):
+                    attrLayerId = ''
 
     def setLayerState(self, item, idx):
-        item.doAsState()
+        try:
+            item.doAsState()
+        except(AttributeError):
+            pass
 
     def setToActive(self, item, idx):
         if type(item) == layerItem:
             item.setToActiveLayer()
+
+    def changeOfMethod(self, idx):
+        if idx == 0:
+            self.toolrenderer.changeToHandDraw()
+            self.cursor = QCursor(Qt.CrossCursor)
+        elif idx == 1:
+            layer = self.dlg.layerCombo.currentLayer()
+            self.iface.setActiveLayer(layer)
+            self.toolrenderer.deactivate()
+            self.iface.mapCanvas().setCursor(QCursor(Qt.PointingHandCursor))
+            self.toolrenderer.changeToSelectLine()
