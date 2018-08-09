@@ -177,7 +177,10 @@ click to cancel then quit)"
         except(TypeError):
             pass
         self.tool.leftClicked.disconnect()
-        self.tool.desactivate.disconnect()
+        try:
+            self.tool.desactivate.disconnect()
+        except(TypeError):
+            pass
         self.profilePlotMain.rubberbandpoint.hide()
         self.profilePlotMain.rubberband.reset(self.profilePlotMain.polygon)
 
@@ -208,10 +211,16 @@ click to cancel then quit)"
         self.tool.leftClicked.connect(self.leftClicked2)
 
     def changeToHandDraw(self):
+        try:
+            self.tool.leftClicked.disconnect()
+        except(TypeError):
+            pass
+
         self.tool.moved.connect(self.moved)
         self.tool.rightClicked.connect(self.rightClicked)
         self.tool.leftClicked.connect(self.leftClicked)
         self.tool.doubleClicked.connect(self.doubleClicked)
+        self.profilePlotMain.rubberband.reset()
         self.profilePlotMain.rubberbandpoint.show()
 
 

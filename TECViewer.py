@@ -25,7 +25,7 @@ from PyQt4.QtGui import QAction, QIcon, QFileDialog, QListWidgetItem
 from qgis.PyQt.QtGui import QMenu, QFileDialog
 # Initialize Qt resources from file resources.py
 # Import the code for the dialog
-from TECViewer_dialog import TECViewDialog, Settings
+from TECViewer_dialog import TECViewDialog
 from qgis.core import QgsCoordinateReferenceSystem
 from qgis.gui import QgsGenericProjectionSelector
 from itertools import izip as zip, count
@@ -34,6 +34,7 @@ from .tools.TECfile import TECfile, TEClayerBox
 from .profile.profilePlot import profilePlot
 from .contour.contourPlot import contourPlot
 from .makeKml.kmlExport import kmlExport
+from qgis.PyQt.QtCore import QSettings
 import os
 import re
 import resources
@@ -74,7 +75,6 @@ class TECView:
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'TECView')
         self.toolbar.setObjectName(u'TECView')
-        self.settings = Settings
         self.all_Attrs = list()
         self.dlg = TECViewDialog()
 
@@ -97,6 +97,13 @@ class TECView:
         self.profiler = profilePlot(self.iface)
         self.contourPlot = contourPlot(self.iface)
         self.makeKml = kmlExport(self.iface)
+        self.settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
+        try:
+            self.systemCRS = self.settings.value('crs')
+        except(AttributeError):
+            self.settings.setValue('crs', 3826)
+            crsType = QgsCoordinateReferenceSystem.InternalCrsId
+            self.systemCRS = QgsCoordinateReferenceSystem(3826, crsType)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -228,6 +235,8 @@ class TECView:
         if result == 1:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
+            self.settings.setValue('projFolder',
+                                   str(self.dlg.projFolderEdit.text()))
             profileDiag = profilePlot(self.iface,
                                       self.dlg.projFolderEdit.text(),
                                       TEC_Box=self.TEC_Container)
@@ -249,6 +258,7 @@ class TECView:
         crsId = crsDiag.selectedCrsId()
         crsType = QgsCoordinateReferenceSystem.InternalCrsId
         self.systemCRS = QgsCoordinateReferenceSystem(crsId, crsType)
+        self.settings.setValue('crs', self.systemCRS.postgisSrid())
 
     def selectTECFile(self):
         Caption = 'Please select a _TEC_.dat file or multiple files'
@@ -256,8 +266,7 @@ class TECView:
         filePathes = QFileDialog.getOpenFileNames(
             self.dlg, Caption, os.path.join(projFolder, 'sim'), "*.dat")
         for path in filePathes:
-            fileWidget = TECfile(self.dlg.fileListWidget, 0, path, self.iface,
-                                 setting=self.settings)
+            fileWidget = TECfile(self.dlg.fileListWidget, 0, path, self.iface)
             self.dlg.fileListWidget.addItem(fileWidget)
 
     def removeTECfile(self):

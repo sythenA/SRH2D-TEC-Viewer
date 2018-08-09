@@ -24,23 +24,14 @@
 import os
 
 import re
-from PyQt4 import QtGui, uic
+from qgis.PyQt import QtGui, uic
+from qgis.PyQt.QtCore import QSettings
 from PyQt4.QtGui import QIcon, QPixmap
 from qgis.gui import QgsColorRampComboBox
 from qgis.core import QgsStyleV2
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'TECViewer_dialog_base.ui'))
-
-Settings = dict()
-try:
-    f = open(os.path.join(os.path.dirname(__file__), '_settings_'), 'r')
-    dat = f.readlines()
-    for line in dat:
-        Settings.update(
-            {re.split('=', line)[0].strip(): re.split('=', line)[1].strip()})
-except:
-    f = open(os.path.join(os.path.dirname(__file__), '_settings_'), 'w')
 
 
 class TECViewDialog(QtGui.QDialog, FORM_CLASS):
@@ -58,7 +49,9 @@ class TECViewDialog(QtGui.QDialog, FORM_CLASS):
 
     def readSettings(self):
         try:
-            self.projFolderEdit.setText(Settings['last_proj'])
+            settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
+            folder = settings.value('projFolder')
+            self.projFolderEdit.setText(folder)
         except:
             pass
 
@@ -84,21 +77,25 @@ class TECReadSettingDiag(QtGui.QDialog, SETIING_DIAG_CLASS):
     def __init__(self, parent=None):
         super(TECReadSettingDiag, self).__init__(parent)
         self.setupUi(self)
-        self.readSettings()
         self.colorRampSelector = QgsColorRampComboBox()
         self.setColorRampBox()
         self.colorRampSelector.setMinimumHeight(20)
         self.ColorRampLayout.addWidget(self.colorRampSelector)
 
-    def readSettings(self):
-        try:
-            self.resolutionInput.setText(Settings['resolution'])
-            self.currentResLabel.setText('Current Setting : ' +
-                                         Settings['resolution'])
-            self.minDisInput.setText(str(float(Settings['min_Dist'])))
-        except:
-            pass
+        # Default value of raster grid resolution and same point distance.
+        self.settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
+        if not self.settings.value('resolution'):
+            self.settings.setValue('resolution', 20.0)
+        if not self.settings.value('min_Dist'):
+            self.settings.setValue('min_Dist', 0.0001)
+        if not self.settings.value('crs'):
+            self.settings.setValue('crs', 3826)
+
+        self.resolutionInput.setText(str(self.settings.value('resolution')))
+        self.minDisInput.setText(str(self.settings.value('min_Dist')))
 
     def setColorRampBox(self):
         style = QgsStyleV2().defaultStyle()
         self.colorRampSelector.populate(style)
+        self.colorRampSelector.insertItem(0, 'default')
+        self.colorRampSelector.setCurrentIndex(0)

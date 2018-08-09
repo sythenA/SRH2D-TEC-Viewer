@@ -39,6 +39,9 @@ class profileSec(QWidget):
         self.dlg.activeLayerList.itemDoubleClicked.connect(
             self.changeCurveStyle)
 
+        self.dlg.moveForwardBtn.clicked.connect(self.moveForward)
+        self.dlg.moveBackwardBtn.clicked.connect(self.moveBackward)
+
     def getProfile(self, pointstoDraw, toolRenderer):
         self.rubberbandbuf.reset()
         self.pointstoDraw = pointstoDraw
@@ -158,18 +161,6 @@ class profileSec(QWidget):
 
         pointstoDraw = []
 
-        """
-        # Remove selection from previous layer if it still exists
-        previousLayer = QgsProject.instance().mapLayer(
-                            self.previousLayerId)
-        if previousLayer:
-            previousLayer.removeSelection()
-
-        if layer:
-            self.previousLayerId = layer.id()
-        else:
-            self.previousLayerId = None"""
-
         if layer:
             layer.removeSelection()
             layer.select([f.id() for f in features])
@@ -222,10 +213,31 @@ class profileSec(QWidget):
 
         self.plotProfiles()
 
+    def moveForward(self):
+        idx = self.dlg.activeLayerList.currentRow()
+        citem = self.dlg.activeLayerList.takeItem(idx)
+
+        if idx-1 < 0:
+            idx = 1
+        self.dlg.activeLayerList.insertItem(idx-1, citem)
+
+        self.plotProfiles()
+
+    def moveBackward(self):
+        idx = self.dlg.activeLayerList.currentRow()
+        citem = self.dlg.activeLayerList.takeItem(idx)
+
+        if idx+1 > self.dlg.activeLayerList.count():
+            idx = self.dlg.activeLayerList.count() - 1
+        self.dlg.activeLayerList.insertItem(idx+1, citem)
+
+        self.plotProfiles()
+
     def plotProfiles(self):
         self.dlg.plotWidget.clear()
         profileList = list()
-        for i in range(0, self.dlg.activeLayerList.count()):
+        total = self.dlg.activeLayerList.count()
+        for i in range(total-1, -1, -1):
             item = self.dlg.activeLayerList.item(i)
             profileList.append(item.profile)
         plotTool().attachCurves(self.dlg.plotWidget, profileList)
