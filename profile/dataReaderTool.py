@@ -46,7 +46,7 @@ class DataReaderTool:
                                 "z" : array of computed z
         """
         # init
-        self.tool = tool1               # needed to transform point coordinates
+        self.tool = tool1             # needed to transform point coordinates
         self.profiles = dict()        # profile with layer and band to compute
         self.profiles.update({"layer": layer})
         self.pointstoDraw = pointstoDraw1        # the polyline to compute

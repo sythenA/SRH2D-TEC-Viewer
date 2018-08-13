@@ -73,6 +73,19 @@
     <string>Select All</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="selectGeoRefBtn">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>230</y>
+     <width>41</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections>

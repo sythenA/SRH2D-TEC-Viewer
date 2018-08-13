@@ -25,8 +25,7 @@ class plotCSTool:
         # enable disctinction between leftclick and doubleclick
         self.lastFreeHandPoints = []
 
-        self.profileSec = profileSec(self.iface,
-                                     self.profilePlotMain.dlg)
+        self.profileSec = profilePlotMain.profileSec
 
         self.textquit0 = "Click for polyline and double click to end (right \
 click to cancel then quit)"
@@ -253,7 +252,7 @@ class profilePlotMainMapTool(QgsMapTool):
 
     def activate(self):
         QgsMapTool.activate(self)
-        self.canvas.setCursor(self.cursor)
+        # self.canvas.setCursor(self.cursor)
 
     def deactivate(self):
         self.desactivate.emit()

@@ -21,7 +21,7 @@
  ***************************************************************************/
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
-from PyQt4.QtGui import QAction, QIcon, QFileDialog, QListWidgetItem
+from PyQt4.QtGui import QAction, QIcon, QListWidgetItem
 from qgis.PyQt.QtGui import QMenu, QFileDialog
 # Initialize Qt resources from file resources.py
 # Import the code for the dialog
@@ -34,9 +34,7 @@ from .tools.TECfile import TECfile, TEClayerBox
 from .profile.profilePlot import profilePlot
 from .contour.contourPlot import contourPlot
 from .makeKml.kmlExport import kmlExport
-from qgis.PyQt.QtCore import QSettings
 import os
-import re
 import resources
 
 
@@ -233,8 +231,6 @@ class TECView:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result == 1:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
             self.settings.setValue('projFolder',
                                    str(self.dlg.projFolderEdit.text()))
             profileDiag = profilePlot(self.iface,
@@ -256,9 +252,10 @@ class TECView:
         crsDiag = QgsGenericProjectionSelector()
         crsDiag.exec_()
         crsId = crsDiag.selectedCrsId()
-        crsType = QgsCoordinateReferenceSystem.InternalCrsId
-        self.systemCRS = QgsCoordinateReferenceSystem(crsId, crsType)
-        self.settings.setValue('crs', self.systemCRS.postgisSrid())
+        if crsId:
+            crsType = QgsCoordinateReferenceSystem.InternalCrsId
+            self.systemCRS = QgsCoordinateReferenceSystem(crsId, crsType)
+            self.settings.setValue('crs', self.systemCRS.postgisSrid())
 
     def selectTECFile(self):
         Caption = 'Please select a _TEC_.dat file or multiple files'
@@ -317,28 +314,6 @@ class TECView:
                     TECitem = self.dlg.fileListWidget.currentItem()
                     self.changeAttrToCancel(TECitem, attrName)
 
-    def writeSettings(self):
-        plugin_fol = os.path.dirname(__file__)
-        f = open(os.path.join(plugin_fol, '_settings_'), 'r')
-        dat = f.readlines()
-        f.close()
-
-        _settings = dict()
-        for line in dat:
-            line = re.split('=', line)
-            _settings.update({line[0].strip(): line[1].strip()})
-
-        proj_Fol = self.dlg.projFolderEdit.text()
-        _settings.update({'last_proj': proj_Fol})
-        self.settings = _settings
-
-        f = open(os.path.join(plugin_fol, '_settings_'), 'w')
-        keys = _settings.keys()
-        for key in keys:
-            f.write(key + ' = ' + _settings[key] + '\n')
-
-        f.close()
-
     def loadTECfiles(self):
         projFolder = self.dlg.projFolderEdit.text()
         outFolder = os.path.join(projFolder, 'TECView')
@@ -355,7 +330,6 @@ class TECView:
             TECitem.export()
             item = TEClayerBox(TECitem, self.all_Attrs)
             self.TEC_Container.append(item)
-        self.writeSettings()
         self.dlg.done(1)
 
     def attrs(self):
@@ -392,8 +366,8 @@ class TECView:
         item = self.dlg.fileListWidget.currentItem()
         folder = os.path.dirname(item.filePath)
         folder = QFileDialog.getExistingDirectory(self.dlg,
-                                                   'Select Output Folder',
-                                                   folder)
+                                                  'Select Output Folder',
+                                                  folder)
         tecName = item.fileName
         self.iface.messageBar().pushMessage('Export ' + tecName + ' to ' +
                                             folder)

@@ -5,8 +5,9 @@ import pip
 from conExportDialog import conExportDiag
 from qgis.core import QgsMapLayerRegistry, QGis, QgsMapLayer
 from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform
+from qgis.gui import QgsGenericProjectionSelector
 from qgis.PyQt.QtGui import QListWidgetItem, QFileDialog
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QSettings
 
 
 installed_packages = pip.get_installed_distributions()
@@ -23,12 +24,13 @@ else:
 
 
 class contourLayerItem(QListWidgetItem):
-    def __init__(self, name, registry, layerId):
+    def __init__(self, name, registry, layerId, crs):
         super(contourLayerItem, self).__init__(name)
         self.setCheckState(Qt.Unchecked)
         self.name = name
         self.registry = registry
         self.layerId = layerId
+        self.crs = crs
         self.exportFolder = None
 
     def getConLevel(self):
@@ -57,7 +59,7 @@ class contourLayerItem(QListWidgetItem):
             for feature in layer.getFeatures():
                 if feature['VALUE'] == level:
                     layerCrs = layer.crs()
-                    tarCrs = QgsCoordinateReferenceSystem(4326)
+                    tarCrs = self.crs
                     tr = QgsCoordinateTransform(layerCrs, tarCrs)
                     featureGeo = feature.geometry()
                     featureGeo.transform(tr)
@@ -74,7 +76,32 @@ class kmlExport:
     def __init__(self, iface):
         self.dlg = conExportDiag()
         self.registry = QgsMapLayerRegistry.instance()
+        self.settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
+
+        crsType = QgsCoordinateReferenceSystem.InternalCrsId
+        if self.settings.value('kmlCrs'):
+            self.kmlCrs = QgsCoordinateReferenceSystem(
+                self.settings.value('kmlCrs'), crsType)
+        else:
+            self.kmlCrs = QgsCoordinateReferenceSystem(
+                self.settings.value('crs'), crsType)
+
+        self.dlg.selectGeoRefBtn.clicked.connect(self.setGeoRef)
         self.dlg.closeWindow.connect(self.breakConnection)
+
+    def setGeoRef(self):
+        generic_projection_selector = QgsGenericProjectionSelector()
+        generic_projection_selector.exec_()
+
+        crsId = generic_projection_selector.selectedCrsId()
+        if crsId:
+            crsType = QgsCoordinateReferenceSystem.InternalCrsId
+            self.kmlCrs = QgsCoordinateReferenceSystem(crsId, crsType)
+            self.settings.setValue('kmlCrs', crsId)
+
+            for i in range(0, self.dlg.conLayerList.count()):
+                item = self.dlg.conLayerList.item(i)
+                item.crs = self.kmlCrs
 
     def updateLayers(self):
         self.dlg.conLayerList.clear()
@@ -85,7 +112,7 @@ class kmlExport:
                 try:
                     if layer.geometryType() == QGis.Line:
                         conItem = contourLayerItem(layer.name(), self.registry,
-                                                   layerId)
+                                                   layerId, self.kmlCrs)
                         conItem.getConLevel()
                         self.dlg.conLayerList.addItem(conItem)
                 except:
@@ -104,8 +131,14 @@ class kmlExport:
             self.exportItems(folder)
 
     def breakConnection(self):
-        self.registry.layersAdded.disconnect()
-        self.registry.layersRemoved.disconnect()
+        try:
+            self.registry.layersAdded.disconnect()
+        except(TypeError):
+            pass
+        try:
+            self.registry.layersRemoved.disconnect()
+        except(TypeError):
+            pass
 
     def exportItems(self, folder):
         for i in range(0, self.dlg.conLayerList.count()):
