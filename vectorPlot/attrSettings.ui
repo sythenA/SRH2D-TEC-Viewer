@@ -44,7 +44,7 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QComboBox" name="comboBox">
+  <widget class="QComboBox" name="xAttrCombo">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -67,7 +67,7 @@
     <string>X Attribute:</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_2">
+  <widget class="QLabel" name="yAttrLabel">
    <property name="geometry">
     <rect>
      <x>240</x>
@@ -80,7 +80,7 @@
     <string>Y Attribute:</string>
    </property>
   </widget>
-  <widget class="QComboBox" name="comboBox_2">
+  <widget class="QComboBox" name="yAttrCombo">
    <property name="geometry">
     <rect>
      <x>230</x>

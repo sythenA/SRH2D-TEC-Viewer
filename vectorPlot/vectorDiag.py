@@ -3,9 +3,10 @@ import os
 from qgis.core import QgsMapLayerRegistry, QgsMarkerSymbolV2
 from qgis.core import QgsSimpleMarkerSymbolLayerV2, QgsDataDefined, QgsSymbolV2
 from qgis.core import QgsVectorFieldSymbolLayer, QgsSingleSymbolRendererV2
+from qgis.core import QgsField
 from qgis.PyQt import QtGui, uic
 from qgis.PyQt.QtGui import QFileDialog, QListWidgetItem, QColor, QMenu
-from qgis.PyQt.QtCore import QSettings
+from qgis.PyQt.QtCore import QSettings, QVariant
 from ..tools.TECfile import TECfile
 from random import randint
 import subprocess
@@ -94,9 +95,33 @@ class vecPlot:
         cursorPos = self.dlg.tecList.mapToGlobal(pos)
         subMenu = QMenu()
         subMenu.addAction('Set Out Folder', self.setItemFolder)
-        # subMenu.addAction('Set XY Attribute', self.exportTEC)
+        subMenu.addAction('Set XY Attribute', self.individualTECAttrSetting)
 
         subMenu.exec_(cursorPos)
+
+    def individualTECAttrSetting(self):
+        item = self.dlg.tecList.currentItem()
+        settingDiag = attrSettingDiag(item.attributes)
+        xAttr, yAttr = settingDiag.run()
+
+        item.xAttr = xAttr
+        item.yAttr = yAttr
+
+    def addAttributeToLayer(self, layer, xAttr, yAttr):
+        layer.startEditing()
+        layer.addAttribute(QgsField("size", QVariant.Int, len=5))
+
+        for feature in layer.getFeatures():
+            VelMeg = feature[xAttr]**2 + feature[yAttr]**2
+            idx = feature.fieldNameIndex('size')
+            if VelMeg > 0:
+                layer.changeAttributeValue(feature.id(), idx, 5)
+                # feature.setAttribute(idx, 5)
+            else:
+                layer.changeAttributeValue(feature.id(), idx, 0)
+                # feature.setAttribute(idx, 0)
+
+        layer.commitChanges()
 
     def setOutput(self, presetFolder):
         outputFolder = QFileDialog().getExistingDirectory(
@@ -116,6 +141,7 @@ class vecPlot:
             else:
                 yAttr = self.yAttr
 
+            self.addAttributeToLayer(item.nodeLayer, xAttr, yAttr)
             renderer = self.buildRenderer(xAttr, yAttr)
             vlayer.setRendererV2(renderer)
 
@@ -153,3 +179,37 @@ class vecPlot:
         renderer = QgsSingleSymbolRendererV2(symbol)
 
         return renderer
+
+
+FORM_CLASS2, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'attrSettings.ui'))
+
+
+class attrSettingDiag(QtGui.QDialog, FORM_CLASS2):
+    def __init__(self, attributes, parent=None):
+        super(attrSettingDiag, self).__init__(parent)
+        self.setupUi(self)
+
+        self.setAttribute(attributes)
+
+    def setAttribute(self, _attributes):
+        attributesList = list()
+        for attr in _attributes:
+            attributesList.append(attr[0])
+
+        self.xAttrCombo.addItems(attributesList)
+        self.yAttrCombo.addItems(attributesList)
+
+    def run(self):
+        self.show()
+        result = self.exec_()
+        if result:
+            return self.xAttrCombo.currentText()[0:10], self.yAttrCombo.currentText()[0:10]
+
+
+"""
+class itemAttrSetting:
+    def __init__(self, attributes):
+        self.dlg = attrSettingDiag(attributes)
+
+    def run(self):"""

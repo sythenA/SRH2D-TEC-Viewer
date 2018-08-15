@@ -1,5 +1,4 @@
 
-from ..TECViewer_dialog import Settings
 from PyQt4.QtGui import QListWidgetItem
 from qgis.core import QgsCoordinateReferenceSystem, QgsMapLayerRegistry
 from qgis.core import QgsFields, QgsField, QgsProject, QgsRasterLayer, QGis
@@ -9,7 +8,7 @@ from qgis.core import QgsColorRampShader, QgsSingleBandPseudoColorRenderer
 from qgis.core import QgsRasterShader
 from osgeo import osr, gdal
 from gdalconst import GA_Update
-from PyQt4.QtCore import QVariant, QFileInfo
+from PyQt4.QtCore import QVariant, QFileInfo, QSettings
 from math import ceil, sqrt
 from shapely.ops import cascaded_union, polygonize
 import numpy as np
@@ -23,22 +22,27 @@ import shapely.geometry as geometry
 
 
 class TECfile(QListWidgetItem):
-    def __init__(self, parent, widgetType, filePath, iface, setting=Settings):
+    def __init__(self, parent, widgetType, filePath, iface):
         super(TECfile, self).__init__(parent, widgetType)
         self.filePath = filePath
         self.fileName = os.path.basename(filePath)
         self.headerLinesCount = 0
         self.iface = iface
         self.TECTile = ''
-        self.setting = setting
+        self.settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
         self.variables = list()
         self.composition = dict()
         self.variableType = list()
         self.readTEC(filePath)
         self.outDir = ''
+        self.xAttr = ''
+        self.yAttr = ''
         refId = QgsCoordinateReferenceSystem.PostgisCrsId
-        crs = QgsCoordinateReferenceSystem(3826, refId)
-        self.crs = crs
+        if self.settings.value('crs'):
+            self.crs = QgsCoordinateReferenceSystem(self.settings.value('crs'),
+                                                    refId)
+        else:
+            self.crs = QgsCoordinateReferenceSystem(3826, refId)
         self.iface = ''
 
         self.setText(os.path.basename(filePath))
@@ -70,7 +74,7 @@ class TECfile(QListWidgetItem):
         points2 = geometry.MultiPoint(list(zip(X, Y)))
         concave_hull2, edge_points2 = self.alpha_shape(points2, alpha=0.01)
         self.hull = concave_hull2
-        reso = float(self.setting['resolution'])
+        reso = float(self.settings.value('resolution'))
         self.reso = reso
 
         X_coordinate = np.arange(self.Xmin, self.Xmax+0.001, reso)
@@ -176,11 +180,19 @@ class TECfile(QListWidgetItem):
         self.loadTEC()
         group = QgsProject.instance().layerTreeRoot().addGroup(self.fileName)
 
+        attrCounter = 0
+        for attr in self.attributes:
+            if attr[1] == 1:
+                attrCounter += 1
+        _attrProgress = int(75/attrCounter/3)
+
+        progress = 75
         self.contentLayers = list()
         for attr in self.attributes:
             idx = self.attributes.index(attr) + 2
             if attr[1] == 1:
                 self.makeContentLayers(attr[0], idx)
+                progress += _attrProgress
                 if len(attr[0]) > 10:
                     rasterName = attr[0][0:10]
                 else:
@@ -190,8 +202,10 @@ class TECfile(QListWidgetItem):
                 rasterLayer = QgsRasterLayer(rasterPath, baseName)
                 rasMapLayer = QgsMapLayerRegistry.instance().addMapLayer(
                     rasterLayer, False)
+                progress += _attrProgress
                 self.contentLayers.append([attr[0], rasMapLayer.id()])
                 group.addLayer(rasterLayer)
+                progress += _attrProgress
 
     def attributeList(self):
         attributes = self.attributes
@@ -356,9 +370,10 @@ class TECfile(QListWidgetItem):
                           {"INPUT": layer,
                            "FIELD": "val",
                            "DIMENSIONS": 1,
-                           "WIDTH": float(self.setting['resolution']),
-                           "HEIGHT": float(self.setting['resolution']),
-                           "RAST_EXT": "%f,%f,%f,%f" % (xmin, xmax, ymin, ymax),
+                           "WIDTH": float(self.settings.value('resolution')),
+                           "HEIGHT": float(self.settings.value('resolution')),
+                           "RAST_EXT": "%f,%f,%f,%f" % (xmin, xmax, ymin,
+                                                        ymax),
                            "TFW": 1,
                            "RTYPE": 4,
                            "NO_DATA": -1,
