@@ -34,6 +34,7 @@ from .tools.TECfile import TECfile, TEClayerBox
 from .profile.profilePlot import profilePlot
 from .contour.contourPlot import contourPlot
 from .makeKml.kmlExport import kmlExport
+from .vectorPlot.vectorDiag import vecPlot
 import os
 import resources
 
@@ -78,6 +79,7 @@ class TECView:
 
         self.dlg.fileListWidget.clear()
         self.dlg.attributeList.clear()
+        self.dlg.progressBar.setVisible(False)
 
         # - Button Connections  - #
         self.dlg.selectProjFolder.clicked.connect(self.selectProjFolder)
@@ -95,6 +97,7 @@ class TECView:
         self.profiler = profilePlot(self.iface)
         self.contourPlot = contourPlot(self.iface)
         self.makeKml = kmlExport(self.iface)
+        self.vecPlot = vecPlot(self.iface)
         self.settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
         try:
             self.systemCRS = self.settings.value('crs')
@@ -213,6 +216,12 @@ class TECView:
             callback=self.makeKml.run,
             parent=self.iface.mainWindow())
 
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Flow Direction'),
+            callback=self.vecPlot.run,
+            parent=self.iface.mainWindow())
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -323,13 +332,12 @@ class TECView:
         self.attrs()
         for i in range(0, self.dlg.fileListWidget.count()):
             TECitem = self.dlg.fileListWidget.item(i)
-            self.iface.messageBar().pushMessage(
-                'generating ' + TECitem.fileName)
             TECitem.outDir = outFolder
             TECitem.iface = self.iface
             TECitem.export()
             item = TEClayerBox(TECitem, self.all_Attrs)
             self.TEC_Container.append(item)
+
         self.dlg.done(1)
 
     def attrs(self):
