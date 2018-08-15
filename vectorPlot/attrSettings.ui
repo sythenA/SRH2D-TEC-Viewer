@@ -1,23 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>vecPlotDiag</class>
- <widget class="QDialog" name="vecPlotDiag">
+ <class>attrSettingDiag</class>
+ <widget class="QDialog" name="attrSettingDiag">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>340</height>
+    <height>121</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>400</width>
+    <height>121</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>400</width>
+    <height>121</height>
+   </size>
+  </property>
   <property name="windowTitle">
-   <string>Plot Flow Direction From TEC file</string>
+   <string>Attribute Settings</string>
   </property>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>290</y>
+     <y>80</y>
      <width>341</width>
      <height>32</height>
     </rect>
@@ -32,35 +44,22 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QListWidget" name="listWidget">
-   <property name="geometry">
-    <rect>
-     <x>-530</x>
-     <y>240</y>
-     <width>256</width>
-     <height>192</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QListWidget" name="tecList">
+  <widget class="QComboBox" name="comboBox">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>10</y>
-     <width>381</width>
-     <height>211</height>
+     <y>40</y>
+     <width>151</width>
+     <height>21</height>
     </rect>
-   </property>
-   <property name="contextMenuPolicy">
-    <enum>Qt::CustomContextMenu</enum>
    </property>
   </widget>
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>230</y>
-     <width>141</width>
+     <x>20</x>
+     <y>15</y>
+     <width>111</width>
      <height>21</height>
     </rect>
    </property>
@@ -71,9 +70,9 @@
   <widget class="QLabel" name="label_2">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>230</y>
-     <width>151</width>
+     <x>240</x>
+     <y>15</y>
+     <width>91</width>
      <height>21</height>
     </rect>
    </property>
@@ -81,48 +80,12 @@
     <string>Y Attribute:</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="addTecBtn">
+  <widget class="QComboBox" name="comboBox_2">
    <property name="geometry">
     <rect>
      <x>230</x>
-     <y>190</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Add</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="deleteTecBtn">
-   <property name="geometry">
-    <rect>
-     <x>310</x>
-     <y>190</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Delete</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="xAttrCombo">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>250</y>
-     <width>161</width>
-     <height>21</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="yAttrCombo">
-   <property name="geometry">
-    <rect>
-     <x>230</x>
-     <y>250</y>
-     <width>161</width>
+     <y>40</y>
+     <width>151</width>
      <height>21</height>
     </rect>
    </property>
@@ -133,7 +96,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>vecPlotDiag</receiver>
+   <receiver>attrSettingDiag</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -149,7 +112,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>vecPlotDiag</receiver>
+   <receiver>attrSettingDiag</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
