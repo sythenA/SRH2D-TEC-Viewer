@@ -52,26 +52,6 @@
     </rect>
    </property>
   </widget>
-  <widget class="QComboBox" name="selectTypeCombo">
-   <property name="geometry">
-    <rect>
-     <x>120</x>
-     <y>390</y>
-     <width>151</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <item>
-    <property name="text">
-     <string>.gif</string>
-    </property>
-   </item>
-   <item>
-    <property name="text">
-     <string>.mp4</string>
-    </property>
-   </item>
-  </widget>
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
@@ -88,7 +68,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Export Type:</string>
+    <string>Export File:</string>
    </property>
   </widget>
   <widget class="QPushButton" name="moveUpBtn">
@@ -163,6 +143,45 @@
    </property>
    <property name="text">
     <string>(s)</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineEdit">
+   <property name="geometry">
+    <rect>
+     <x>-180</x>
+     <y>340</y>
+     <width>113</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="outputNameEdit">
+   <property name="geometry">
+    <rect>
+     <x>90</x>
+     <y>387</y>
+     <width>151</width>
+     <height>25</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>250</x>
+     <y>390</y>
+     <width>71</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Times New Roman</family>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>.gif</string>
    </property>
   </widget>
  </widget>
