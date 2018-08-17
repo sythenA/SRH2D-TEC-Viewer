@@ -35,6 +35,7 @@ from .profile.profilePlot import profilePlot
 from .contour.contourPlot import contourPlot
 from .makeKml.kmlExport import kmlExport
 from .vectorPlot.vectorDiag import vecPlot
+from .animation.makeAnimation import makeAnimation
 import os
 import resources
 
@@ -93,6 +94,7 @@ class TECView:
         self.dlg.callSettingsBtn.clicked.connect(self.runSettings)
         self.dlg.fileListWidget.customContextMenuRequested.connect(
             self.subMenuOnFileList)
+        self.animation = makeAnimation(self.iface)
 
         self.profiler = profilePlot(self.iface)
         self.contourPlot = contourPlot(self.iface)
@@ -216,10 +218,18 @@ class TECView:
             callback=self.makeKml.run,
             parent=self.iface.mainWindow())
 
+        flowDirIcon = os.path.join(os.path.dirname(__file__), 'navigation.png')
         self.add_action(
-            icon_path,
+            flowDirIcon,
             text=self.tr(u'Flow Direction'),
             callback=self.vecPlot.run,
+            parent=self.iface.mainWindow())
+
+        animationIcon = os.path.join(os.path.dirname(__file__), 'film.png')
+        self.add_action(
+            animationIcon,
+            text=self.tr(u'Make Aniamtion'),
+            callback=self.animation.run,
             parent=self.iface.mainWindow())
 
     def unload(self):
