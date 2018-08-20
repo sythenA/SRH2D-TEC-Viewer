@@ -1,9 +1,9 @@
-
+# -*-coding:big5-*-
 import os
 from qgis.PyQt import QtGui, uic
 from qgis.PyQt.QtCore import QSettings, Qt, QSize
 from qgis.PyQt.QtGui import QListWidgetItem, QFileDialog, QImage, QColor
-from qgis.PyQt.QtGui import QPixmap, QIcon, QPainter
+from qgis.PyQt.QtGui import QPixmap, QIcon, QPainter, QMessageBox
 from qgis.core import QgsMapLayerRegistry, QgsMapRenderer, QgsRectangle
 from qgis.core import QgsMapLayer, QgsRasterPipe, QgsRasterFileWriter
 import subprocess
@@ -108,8 +108,10 @@ class makeAnimation:
             self.settings.setValue('animeName', self.dlg.outputNameEdit.text())
             self.settings.setValue('animeLapse',
                                    int(self.dlg.timeLapseEdit.text()))
-            self.genGif()
-            self.genMp4()
+            if self.dlg.exportTypeCombo.currentText() == '.gif':
+                self.genGif()
+            elif self.dlg.exportTypeCombo.currentText() == '.mp4':
+                self.genMp4()
 
     def renderLayers(self):
         self.renderedLayerList = list()
@@ -174,10 +176,21 @@ class makeAnimation:
         return path
 
     def genGif(self):
-        reg = _winreg.ConnectRegistry(None, _winreg.HKEY_LOCAL_MACHINE)
-        k = _winreg.OpenKey(reg, r'SOFTWARE\ImageMagick\Current')
-        pathName = os.path.join(_winreg.QueryValueEx(k, 'BinPath')[0],
-                                'magick.exe')
+        msg = QMessageBox()
+        try:
+            reg = _winreg.ConnectRegistry(None, _winreg.HKEY_LOCAL_MACHINE)
+            k = _winreg.OpenKey(reg, r'SOFTWARE\ImageMagick\Current')
+            pathName = os.path.join(_winreg.QueryValueEx(k, 'BinPath')[0],
+                                    'magick.exe')
+        except(WindowsError):
+            msg.setIcon(QMessageBox.Critical)
+            msg = u'輸出.gif動畫需要安裝ImageMagick\n請先安裝ImageMagick再使用.gif動畫輸出功能'
+            msg.setWindowTitle(u'找不到已安裝的ImageMgick版本')
+            msg.setText(message)
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
+            return None
 
         lapse = int(self.dlg.timeLapseEdit.text())
         cmd = ['cmd', '/c', pathName, 'convert', '-loop', '0', '-delay',
@@ -189,8 +202,14 @@ class makeAnimation:
 
         cmd.append(os.path.join(self.workingFolder, outName))
         subprocess.Popen(cmd, shell=True)
+        msg.setIcon(QMessageBox.Information)
+        msg.setText(u'輸出.gif完成')
+        msg.setWindowTitle(u'輸出完成')
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
 
     def genMp4(self):
+        msg = QMessageBox()
         ffmpegPath = os.path.join(os.path.dirname(__file__),
                                   'ffmpeg.exe')
 
@@ -205,4 +224,16 @@ class makeAnimation:
         subprocess.Popen(['cmd', '/c', 'del',
                           os.path.join(self.workingFolder
                                        , self.dlg.outputNameEdit.text())+'.mp4'])
-        subprocess.call(cmd, shell=True)
+        t = subprocess.call(cmd, shell=True)
+        if t == 0:
+            msg.setIcon(QMessageBox.Information)
+            msg.setText(u'輸出.mp4完成')
+            msg.setWindowTitle(u'輸出完成')
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+        elif t == 1:
+            msg.setIcon(QMessageBox.critical)
+            msg.setText(u'輸出.mp4失敗')
+            msg.setWindowTitle(u'輸出失敗')
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
