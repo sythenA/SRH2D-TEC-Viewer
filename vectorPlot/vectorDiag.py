@@ -3,7 +3,8 @@ import os
 from qgis.core import QgsMapLayerRegistry, QgsMarkerSymbolV2
 from qgis.core import QgsSimpleMarkerSymbolLayerV2, QgsDataDefined, QgsSymbolV2
 from qgis.core import QgsVectorFieldSymbolLayer, QgsSingleSymbolRendererV2
-from qgis.core import QgsField
+from qgis.core import QgsField, QgsLineSymbolV2, QgsArrowSymbolLayer
+from qgis.core import QgsRenderContext, QgsDrawSourceEffect, QgsPaintEffect
 from qgis.PyQt import QtGui, uic
 from qgis.PyQt.QtGui import QFileDialog, QListWidgetItem, QColor, QMenu
 from qgis.PyQt.QtCore import QSettings, QVariant
@@ -89,7 +90,7 @@ class vecPlot:
 
             return outDir
         else:
-            return ''
+            return projFolder
 
     def rightClickOnItem(self, pos):
         cursorPos = self.dlg.tecList.mapToGlobal(pos)
@@ -116,10 +117,8 @@ class vecPlot:
             idx = feature.fieldNameIndex('size')
             if VelMeg > 0:
                 layer.changeAttributeValue(feature.id(), idx, 5)
-                # feature.setAttribute(idx, 5)
             else:
                 layer.changeAttributeValue(feature.id(), idx, 0)
-                # feature.setAttribute(idx, 0)
 
         layer.commitChanges()
 
@@ -153,6 +152,32 @@ class vecPlot:
         if outputFolder:
             item.outDir = outputFolder
 
+    def subRenderer(self, color):
+        lineSymbol = QgsLineSymbolV2()
+        arrowSymbol = QgsArrowSymbolLayer().create()
+        arrowSymbol.setArrowWidth(0.0)
+        arrowSymbol.setArrowStartWidth(0.0)
+        arrowSymbol.setColor(color)
+        arrowSymbol.setIsCurved(False)
+        arrowSymbol.setIsRepeated(False)
+        renderSetting = QgsRenderContext()
+        renderSetting.setFlag(QgsRenderContext.Antialiasing, False)
+        renderSetting.setFlag(QgsRenderContext.DrawSymbolBounds, False)
+        renderSetting.setFlag(QgsRenderContext.ForceVectorOutput, False)
+        renderSetting.setFlag(QgsRenderContext.UseAdvancedEffects, False)
+        renderSetting.setFlag(QgsRenderContext.UseRenderingOptimization, False)
+
+        arrEffectStack = arrowSymbol.paintEffect()
+        effList = arrEffectStack.effectList()
+        for i in range(0, len(effList)):
+            if type(effList[i]) == QgsDrawSourceEffect:
+                effList[i].setDrawMode(1)
+        arrEffectStack.setEnabled(True)
+
+        lineSymbol.appendSymbolLayer(arrowSymbol)
+
+        return lineSymbol
+
     def buildRenderer(self, xAttr, yAttr):
         color = QColor(randint(0, 255), randint(0, 255), randint(0, 255))
         symbol = QgsMarkerSymbolV2.createSimple({})
@@ -172,8 +197,12 @@ class vecPlot:
         symbol_layer.setColor(color)
         symbol_layer.VectorFieldType(QgsVectorFieldSymbolLayer.Cartesian)
         symbol_layer.AngleUnits(QgsVectorFieldSymbolLayer.Degrees)
+        symbol_layer.setScale(2.0)
         symbol_layer.setXAttribute(xAttr)
         symbol_layer.setYAttribute(yAttr)
+        subSymbol = self.subRenderer(color)
+        symbol_layer.setSubSymbol(subSymbol)
+
         symbol.appendSymbolLayer(symbol_layer)
 
         renderer = QgsSingleSymbolRendererV2(symbol)
