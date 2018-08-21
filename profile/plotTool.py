@@ -1,15 +1,20 @@
 # -*- coding: big5 -*-
 
-from PyQt4.QtCore import QSettings, Qt, QSize
-from PyQt4.QtGui import QPrinter, QPrintDialog, QPixmap, QFileDialog
-from PyQt4.QtSvg import QSvgGenerator
+from qgis.PyQt.QtCore import QSettings, Qt, QSize
+from qgis.PyQt.QtGui import QPrinter, QPrintDialog, QPixmap, QFileDialog
+from qgis.PyQt.QtGui import QBrush, QPainter
+from qgis.PyQt.QtSvg import QSvgGenerator
+from math import sqrt
 
-from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotItem, QwtPlot
+from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotItem, QwtPlotPrintFilter, QwtLegend
+from PyQt4.Qwt5 import QwtPlot
 import itertools  # only needed for Qwt plot
 import os
 
 
 class plotTool:
+    settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
+
     def attachCurves(self, wdg, profiles):
         for i in range(0, len(profiles)):
             tmp_name = ("%s") % (profiles[i]["layer"].name())
@@ -47,7 +52,7 @@ class plotTool:
                 pass
                 # self.iface.mainWindow().statusBar().showMessage(
                 # "Problem with setting scale of plotting")
-        self.resetScale(wdg, profiles)
+        # self.resetScale(wdg, profiles)
         wdg.replot()
 
     def resetScale(self, wdg, profiles):
@@ -59,8 +64,6 @@ class plotTool:
         maxYVal = 0.
         minYVal = 1.0E8
 
-        QwtPlot
-
         for i in range(0, len(profiles)):
             xx = profiles[i]["l"]
             yy = profiles[i]["z"]
@@ -70,35 +73,38 @@ class plotTool:
 
             xx = [k for k in xx if k is not None]
 
-            _maxXVal = max(xx)
-            _minXVal = min(xx)
-            _maxYVal = self.findMax(profiles, i)
-            _minYVal = self.findMin(profiles, i)
+            try:
+                _maxXVal = max(xx)
+                _minXVal = min(xx)
+                _maxYVal = self.findMax(profiles, i)
+                _minYVal = self.findMin(profiles, i)
 
-            if _maxXVal > maxXVal:
-                maxXVal = _maxXVal
-            if _minXVal < minXVal:
-                minXVal = _minXVal
-            if _maxYVal > maxYVal:
-                maxYVal = _maxYVal
-            if _minYVal < minYVal:
-                minYVal = _minYVal
+                if _maxXVal > maxXVal:
+                    maxXVal = _maxXVal
+                if _minXVal < minXVal:
+                    minXVal = _minXVal
+                if _maxYVal > maxYVal:
+                    maxYVal = _maxYVal
+                if _minYVal < minYVal:
+                    minYVal = _minYVal
 
-        # Y Axis rescale
-        if minYVal < maxYVal:
-            wdg.setAxisScale(0, minYVal-0.1*maxYVal, maxYVal*1.1, 0.)
-            wdg.replot()
-        elif minYVal == maxYVal:
-            wdg.setAxisScale(0, 0.0, 10.0, 0.)
-            wdg.replot()
+                # Y Axis rescale
+                if minYVal < maxYVal:
+                    wdg.setAxisScale(0, minYVal-0.1*maxYVal, maxYVal*1.1, 0.)
+                    wdg.replot()
+                elif minYVal == maxYVal:
+                    wdg.setAxisScale(0, 0.0, 10.0, 0.)
+                    wdg.replot()
 
-        # X Axis rescale
-        if minXVal < maxXVal:
-            wdg.setAxisScale(2, minXVal*0.9, maxXVal+0.1*minXVal, 0.)
-            wdg.replot()
-        elif minXVal == maxXVal:
-            wdg.setAxisScale(2, 0.0, 100.0, 0.)
-            wdg.replot()
+                # X Axis rescale
+                if minXVal < maxXVal:
+                    wdg.setAxisScale(2, minXVal*0.9, maxXVal+0.1*minXVal, 0.)
+                    wdg.replot()
+                elif minXVal == maxXVal:
+                    wdg.setAxisScale(2, 0.0, 100.0, 0.)
+                    wdg.replot()
+            except(ValueError):
+                pass
 
     def findMin(self, profiles, nr):
         minVal = min(z for z in profiles[nr]["z"] if z is not None)
@@ -122,107 +128,443 @@ class plotTool:
             if temp1[j].rtti() == QwtPlotItem.Rtti_PlotCurve:
                 temp1[j].detach()
 
-    def changeColor(self, wdg, color1, name):
-        # Action when clicking the tableview - color
-        temp1 = wdg.plotWidget.itemList()
-        for i in range(len(temp1)):
-            if name == str(temp1[i].title().text()):
-                curve = temp1[i]
-                curve.setPen(QPen(color1, 3))
-                wdg.plotWdg.replot()
-                # break
-                # Don't break as there may be multiple curves with a common
-                # name (segments separated with None values)
+    def exportToTxt(self, profiles, f, title=''):
+        # Generate Header
+        if title:
+            f.write(str(title)+'\n')
+        line = ''
+        line += ('{:<15s}'.format('Distance') + ' ')
+        line += ('{:<15s}'.format('X_Coordinate') + ' ')
+        line += ('{:<15s}'.format('Y_coordinate') + ' ')
+        for profile in profiles:
+            name = '{:<15s}'.format(profile['layer'].name())
+            line += (name + ' ')
+        line = line.rstrip() + '\n'
+        f.write(line)
 
-    def changeAttachCurve(self, wdg, bool, name):
-        # Action when clicking the tableview - checkstate
-        temp1 = wdg.plotWidget.itemList()
-        for i in range(len(temp1)):
-            if name == str(temp1[i].title().text()):
-                curve = temp1[i]
-                if bool:
-                    curve.setVisible(True)
+        for profile in profiles:
+            if profile:
+                L = profile['l']
+                X = profile['x']
+                Y = profile['y']
+        try:
+            L[0] = 0.
+        except(IndexError):
+            f.write('\n')
+            return
+
+        for j in range(1, len(L)):
+            if not L[j]:
+                L[j] = L[j-1] + sqrt((float(X[j])-float(X[j-1]))**2 +
+                                     (float(Y[j])-float(Y[j-1]))**2)
+
+        for i in range(0, len(X)):
+            line = ''
+            if type(L[i]) is float:
+                line += ('{:<15.3f}'.format(L[i]) + ' ')
+            elif type(L[i]) is str:
+                line += ('{:<15s}'.format(L[i]) + ' ')
+            elif not L[i]:
+                line += ' '*16
+            if type(X[i]) is float:
+                line += ('{:<15.3f}'.format(X[i]) + ' ')
+            elif type(X[i]) is str:
+                line += ('{:<15s}'.format(X[i]) + ' ')
+            if type(Y[i]) is float:
+                line += ('{:<15.3f}'.format(Y[i]) + ' ')
+            elif type(Y[i]) is str:
+                line += ('{:<15s}'.format(Y[i]) + ' ')
+
+            for profile in profiles:
+                Z = profile['z']
+                if type(Z[i]) is float:
+                    line += ('{:<15.3f}'.format(Z[i]) + ' ')
+                elif type(Z[i]) is str:
+                    line += ('{:<15s}'.format(Z[i]) + ' ')
+                elif not Z[i]:
+                    line += ' '*16
+
+            line = line.rstrip() + '\n'
+            f.write(line)
+        f.write('\n')
+
+    def exportToCsv(self, profiles, f, title=''):
+        # Generate Header
+        if title:
+            f.write(str(title)+'\n')
+        line = ''
+        line += ('Distance' + ',')
+        line += ('X_Coordinate' + ',')
+        line += ('Y_coordinate' + ',')
+        for profile in profiles:
+            name = profile['layer'].name()
+            line += (name + ',')
+        line = line[:-1] + '\n'
+        f.write(line)
+
+        for profile in profiles:
+            if profile:
+                L = profile['l']
+                X = profile['x']
+                Y = profile['y']
+        try:
+            L[0] = 0.
+        except(IndexError):
+            f.write('\n')
+            return
+
+        for j in range(1, len(L)):
+            if not L[j]:
+                L[j] = L[j-1] + sqrt((float(X[j])-float(X[j-1]))**2 +
+                                     (float(Y[j])-float(Y[j-1]))**2)
+
+        for i in range(0, len(X)):
+            line = ''
+            if L[i]:
+                line += (str(L[i]) + ',')
+            else:
+                line += '  ,'
+            if X[i]:
+                line += (str(X[i]) + ',')
+            else:
+                line += '  ,'
+            if Y[i]:
+                line += (str(Y[i]) + ',')
+            else:
+                line += ' ,'
+
+            for profile in profiles:
+                Z = profile['z']
+                if Z[i]:
+                    line += (str(Z[i]) + ',')
                 else:
-                    curve.setVisible(False)
-                wdg.plotWdg.replot()
-                break
+                    line += ' ,'
+            line = line[:-1] + '\n'
 
-    def outPrint(self, iface, wdg, mdl):
-        # Postscript file rendering doesn't work properly yet.
-        for i in range(0, mdl.rowCount()):
-            if mdl.item(i, 0).data(Qt.CheckStateRole):
-                name = str(mdl.item(i, 2).data(Qt.EditRole))
-                # return
+            f.write(line)
+        f.write('\n')
+
+    def exportToXls(self, profiles, sh, title=''):
+        if title:
+            sh.write(0, 0, str(title))
+
+        sh.write(1, 0, 'Distance')
+        sh.write(1, 1, 'X_Coordinate')
+        sh.write(1, 2, 'Y_Coordinate')
+        counter = 3
+        for profile in profiles:
+            sh.write(1, counter, profile['layer'].name())
+            counter += 1
+
+        for profile in profiles:
+            if profile:
+                X = profile['x']
+                Y = profile['y']
+                L = profile['l']
+
+        try:
+            L[0] = 0.
+        except(IndexError):
+            return
+
+        for j in range(1, len(L)):
+            if not L[j]:
+                L[j] = L[j-1] + sqrt((float(X[j])-float(X[j-1]))**2 +
+                                     (float(Y[j])-float(Y[j-1]))**2)
+        for i in range(0, len(X)):
+            sh.write(2+i, 0, float(L[i]))
+            sh.write(2+i, 1, float(X[i]))
+            sh.write(2+i, 2, float(Y[i]))
+            counter = 3
+            for profile in profiles:
+                Z = profile['z']
+                if Z[i]:
+                    sh.write(2+i, counter, float(Z[i]))
+                counter += 1
+
+    def outSVG(self, plotWidget):
+        if self.settings.value('lastOutputDir'):
+            folder = self.settings.value('lastOutputDir')
+        else:
+            folder = self.settings.value('projFolder')
+
         fileName = QFileDialog.getSaveFileName(
-            iface.mainWindow(), "Save As", "Profile of " + name +
-            ".ps", "PostScript Format (*.ps)")
+            caption="Save Plot As .svg file",
+            directory=folder,
+            filter="Scalable Vector Graphics(*.svg)")
+
         if fileName:
-            printer = QPrinter()
-            printer.setCreator("QGIS Profile Plugin")
-            printer.setDocName("QGIS Profile")
-            printer.setOutputFileName(fileName)
-            printer.setColorMode(QPrinter.Color)
-            printer.setOrientation(QPrinter.Portrait)
-            dialog = QPrintDialog(printer)
-            if dialog.exec_():
-                wdg.plotWdg.print_(printer)
+            pix = QSvgGenerator()
+            pix.setFileName(fileName)
+            pix.setSize(QSize(600, 400))
 
-    def outPDF(self, iface, wdg, mdl):
-        for i in range(0, mdl.rowCount()):
-            if mdl.item(i, 0).data(Qt.CheckStateRole):
-                name = str(mdl.item(i, 2).data(Qt.EditRole))
-                break
+            title = self.settings.value('figureTitle')
+            plotWidget.setTitle(title)
+            legend = QwtLegend()
+            plotWidget.insertLegend(legend)
+            plotWidget.setAxisTitle(
+                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
+            plotWidget.setAxisTitle(
+                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
+
+            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
+            filter = QwtPlotPrintFilter()
+            filter.setOptions(QwtPlotPrintFilter.PrintAll
+                              & ~QwtPlotPrintFilter.PrintBackground)
+            plotWidget.print_(pix, filter)
+            plotWidget.insertLegend(None)
+            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
+            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
+            plotWidget.setTitle(None)
+
+    def outPNG(self, plotWidget):
+        if self.settings.value('lastOutputDir'):
+            folder = self.settings.value('lastOutputDir')
+        else:
+            folder = self.settings.value('projFolder')
+
         fileName = QFileDialog.getSaveFileName(
-            iface.mainWindow(), "Save As", "Profile of " + name +
-            ".pdf", "Portable Document Format (*.pdf)")
-        if fileName:
-            printer = QPrinter()
-            printer.setCreator('QGIS Profile Plugin')
-            printer.setOutputFileName(fileName)
-            printer.setOutputFormat(QPrinter.PdfFormat)
-            printer.setOrientation(QPrinter.Landscape)
-            wdg.plotWdg.print_(printer)
-
-    def outSVG(self, iface, wdg, mdl):
-        for i in range(0, mdl.rowCount()):
-            if mdl.item(i, 0).data(Qt.CheckStateRole):
-                name = str(mdl.item(i, 2).data(Qt.EditRole))
-        fileName = QFileDialog.getSaveFileName(
-            parent=iface.mainWindow(), caption="Save As",
-            directory=wdg.profiletoolcore.loaddirectory,
-            # filter = "Profile of " + name + ".png",
-            filter="Scalable Vector Graphics (*.svg)")
-
-        if fileName:
-            if isinstance(fileName, tuple):  # pyqt5 case
-                fileName = fileName[0]
-
-            wdg.profiletoolcore.loaddirectory = os.path.dirname(fileName)
-            QSettings().setValue(
-                "profiletool/lastdirectory", wdg.profiletoolcore.loaddirectory)
-
-            printer = QSvgGenerator()
-            printer.setFileName(fileName)
-            printer.setSize(QSize(800, 400))
-            wdg.plotWdg.print_(printer)
-
-    def outPNG(self, iface, wdg, mdl):
-        for i in range(0, mdl.rowCount()):
-            if mdl.item(i, 0).data(Qt.CheckStateRole):
-                name = str(mdl.item(i, 2).data(Qt.EditRole))
-                # return
-        fileName = QFileDialog.getSaveFileName(
-            parent=iface.mainWindow(), caption="Save As",
-            directory=wdg.profiletoolcore.loaddirectory,
-            # filter = "Profile of " + name + ".png",
+            caption="Save Plot As .png file",
+            directory=folder,
             filter="Portable Network Graphics (*.png)")
 
         if fileName:
-            if isinstance(fileName, tuple):  # pyqt5 case
-                fileName = fileName[0]
+            title = self.settings.value('figureTitle')
+            plotWidget.setTitle(title)
+            pix = QPixmap(QSize(600, 400))
+            sh = QBrush(pix)
+            sh.setColor(Qt.white)
+            sh.setStyle(Qt.SolidPattern)
+            painter = QPainter()
+            painter.begin(pix)
+            painter.setBrush(sh)
+            painter.drawRect(0, 0, 600, 400)
+            painter.end()
 
-            wdg.profiletoolcore.loaddirectory = os.path.dirname(fileName)
-            QSettings().setValue("profiletool/lastdirectory",
-                                 wdg.profiletoolcore.loaddirectory)
+            legend = QwtLegend()
+            plotWidget.insertLegend(legend)
+            plotWidget.setAxisTitle(
+                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
+            plotWidget.setAxisTitle(
+                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
 
-            QPixmap.grabWidget(wdg.plotWdg).save(fileName, "PNG")
+            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
+            filter = QwtPlotPrintFilter()
+            filter.setOptions(QwtPlotPrintFilter.PrintAll
+                              & ~QwtPlotPrintFilter.PrintBackground)
+            plotWidget.print_(pix, filter)
+            pix.save(fileName)
+            plotWidget.insertLegend(None)
+            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
+            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
+            plotWidget.setTitle(None)
+
+    def outJPG(self, plotWidget):
+        if self.settings.value('lastOutputDir'):
+            folder = self.settings.value('lastOutputDir')
+        else:
+            folder = self.settings.value('projFolder')
+
+        fileName = QFileDialog.getSaveFileName(
+            caption="Save Plot As .jpg file",
+            directory=folder,
+            filter="JPEG(*.jpg;*.jpeg)")
+
+        if fileName:
+            title = self.settings.value('figureTitle')
+            plotWidget.setTitle(title)
+            pix = QPixmap(QSize(600, 400))
+            sh = QBrush(pix)
+            sh.setColor(Qt.white)
+            sh.setStyle(Qt.SolidPattern)
+            painter = QPainter()
+            painter.begin(pix)
+            painter.setBrush(sh)
+            painter.drawRect(0, 0, 600, 400)
+            painter.end()
+
+            legend = QwtLegend()
+            plotWidget.insertLegend(legend)
+            plotWidget.setAxisTitle(
+                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
+            plotWidget.setAxisTitle(
+                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
+
+            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
+            filter = QwtPlotPrintFilter()
+            filter.setOptions(QwtPlotPrintFilter.PrintAll
+                              & ~QwtPlotPrintFilter.PrintBackground)
+            plotWidget.print_(pix, filter)
+            pix.save(fileName)
+            plotWidget.insertLegend(None)
+            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
+            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
+            plotWidget.setTitle(None)
+
+    def outBMP(self, plotWidget):
+        if self.settings.value('lastOutputDir'):
+            folder = self.settings.value('lastOutputDir')
+        else:
+            folder = self.settings.value('projFolder')
+
+        fileName = QFileDialog.getSaveFileName(
+            caption="Save Plot As .bmp file",
+            directory=folder,
+            filter="bitmap (*.bmp)")
+
+        if fileName:
+            title = self.settings.value('figureTitle')
+            plotWidget.setTitle(title)
+            pix = QPixmap(QSize(600, 400))
+            sh = QBrush(pix)
+            sh.setColor(Qt.white)
+            sh.setStyle(Qt.SolidPattern)
+            painter = QPainter()
+            painter.begin(pix)
+            painter.setBrush(sh)
+            painter.drawRect(0, 0, 600, 400)
+            painter.end()
+
+            legend = QwtLegend()
+            plotWidget.insertLegend(legend)
+            plotWidget.setAxisTitle(
+                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
+            plotWidget.setAxisTitle(
+                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
+
+            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
+            filter = QwtPlotPrintFilter()
+            filter.setOptions(QwtPlotPrintFilter.PrintAll
+                              & ~QwtPlotPrintFilter.PrintBackground)
+            plotWidget.print_(pix, filter)
+            pix.save(fileName)
+            plotWidget.insertLegend(None)
+            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
+            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
+            plotWidget.setTitle(None)
+
+    def outTIF(self, plotWidget):
+        if self.settings.value('lastOutputDir'):
+            folder = self.settings.value('lastOutputDir')
+        else:
+            folder = self.settings.value('projFolder')
+
+        fileName = QFileDialog.getSaveFileName(
+            caption="Save Plot As .tif file",
+            directory=folder,
+            filter="Tagged Image File Format (*.tif;*.tiff)")
+
+        if fileName:
+            title = self.settings.value('figureTitle')
+            plotWidget.setTitle(title)
+            pix = QPixmap(QSize(600, 400))
+            sh = QBrush(pix)
+            sh.setColor(Qt.white)
+            sh.setStyle(Qt.SolidPattern)
+            painter = QPainter()
+            painter.begin(pix)
+            painter.setBrush(sh)
+            painter.drawRect(0, 0, 600, 400)
+            painter.end()
+
+            legend = QwtLegend()
+            plotWidget.insertLegend(legend)
+            plotWidget.setAxisTitle(
+                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
+            plotWidget.setAxisTitle(
+                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
+
+            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
+            filter = QwtPlotPrintFilter()
+            filter.setOptions(QwtPlotPrintFilter.PrintAll
+                              & ~QwtPlotPrintFilter.PrintBackground)
+            plotWidget.print_(pix, filter)
+            pix.save(fileName)
+            plotWidget.insertLegend(None)
+            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
+            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
+            plotWidget.setTitle(None)
+
+    def outXBM(self, plotWidget):
+        if self.settings.value('lastOutputDir'):
+            folder = self.settings.value('lastOutputDir')
+        else:
+            folder = self.settings.value('projFolder')
+
+        fileName = QFileDialog.getSaveFileName(
+            caption="Save Plot As .xbm file",
+            directory=folder,
+            filter="X Bitmap (*.xbm)")
+
+        if fileName:
+            title = self.settings.value('figureTitle')
+            plotWidget.setTitle(title)
+            pix = QPixmap(QSize(600, 400))
+            sh = QBrush(pix)
+            sh.setColor(Qt.white)
+            sh.setStyle(Qt.SolidPattern)
+            painter = QPainter()
+            painter.begin(pix)
+            painter.setBrush(sh)
+            painter.drawRect(0, 0, 600, 400)
+            painter.end()
+
+            legend = QwtLegend()
+            plotWidget.insertLegend(legend)
+            plotWidget.setAxisTitle(
+                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
+            plotWidget.setAxisTitle(
+                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
+
+            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
+            filter = QwtPlotPrintFilter()
+            filter.setOptions(QwtPlotPrintFilter.PrintAll
+                              & ~QwtPlotPrintFilter.PrintBackground)
+            plotWidget.print_(pix, filter)
+            pix.save(fileName)
+            plotWidget.insertLegend(None)
+            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
+            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
+            plotWidget.setTitle(None)
+
+    def outXPM(self, plotWidget):
+        if self.settings.value('lastOutputDir'):
+            folder = self.settings.value('lastOutputDir')
+        else:
+            folder = self.settings.value('projFolder')
+
+        fileName = QFileDialog.getSaveFileName(
+            caption="Save Plot As .xpm file",
+            directory=folder,
+            filter="X Pixmap (*.xpm)")
+
+        if fileName:
+            title = self.settings.value('figureTitle')
+            plotWidget.setTitle(title)
+            pix = QPixmap(QSize(600, 400))
+            sh = QBrush(pix)
+            sh.setColor(Qt.white)
+            sh.setStyle(Qt.SolidPattern)
+            painter = QPainter()
+            painter.begin(pix)
+            painter.setBrush(sh)
+            painter.drawRect(0, 0, 600, 400)
+            painter.end()
+
+            legend = QwtLegend()
+            plotWidget.insertLegend(legend)
+            plotWidget.setAxisTitle(
+                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
+            plotWidget.setAxisTitle(
+                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
+
+            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
+            filter = QwtPlotPrintFilter()
+            filter.setOptions(QwtPlotPrintFilter.PrintAll
+                              & ~QwtPlotPrintFilter.PrintBackground)
+            plotWidget.print_(pix, filter)
+            pix.save(fileName)
+            plotWidget.insertLegend(None)
+            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
+            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
+            plotWidget.setTitle(None)
