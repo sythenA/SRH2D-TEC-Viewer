@@ -72,7 +72,7 @@ class profileSec(QWidget):
         # plot profiles
         for i in range(0, len(self.profiles)):
             profileItem = profileListItem(self.profiles[i],
-                                          self.dlg.activeLayerList)
+                                          parent=self.dlg.activeLayerList)
             self.dlg.activeLayerList.addItem(profileItem)
 
         self.plotProfiles()
@@ -326,7 +326,10 @@ class profileSec(QWidget):
         for i in range(total-1, -1, -1):
             item = self.dlg.activeLayerList.item(i)
             profileList.append(item.profile)
-        plotTool().attachCurves(self.dlg.plotWidget, profileList)
+        try:
+            plotTool().attachCurves(self.dlg.plotWidget, profileList)
+        except(TypeError):
+            pass
 
     def exportText(self):
         projFolder = self.settings.value('projFolder')
@@ -441,16 +444,24 @@ class profileListItem(QListWidgetItem):
 
     def __init__(self, profile, parent):
         self.name = profile['TECName'] + '_' + profile['layer'].name()
+        self.layer = profile['layer']
         super(profileListItem, self).__init__(self.name, parent)
+        self.parent = parent
         self.profile = profile
         self.width = 3.
         self.color = QtCorlors[randint(1, 14)]
         self.setStyle()
         self.genIcon()
+        self.layer.nameChanged.connect(self.changeName)
 
     def setStyle(self):
         self.Style = QPen(QBrush(self.color), self.width, style=self.lineStyle)
         self.profile.update({'style': self.Style})
+
+    def changeName(self):
+        self.name = self.profile['TECName'] + '_' + self.layer.name()
+        self.setText(self.name)
+        self.parent.update()
 
     def genIcon(self):
         TECName = self.profile['TECName']
