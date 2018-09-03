@@ -282,23 +282,27 @@ class plotTool:
                     sh.write(2+i, counter, float(Z[i]))
                 counter += 1
 
-    def outSVG(self, plotWidget):
-        if self.settings.value('lastOutputDir'):
-            folder = self.settings.value('lastOutputDir')
+    def outSVG(self, plotWidget, d_folder, name, title):
+        if d_folder:
+            fileName = os.path.join(d_folder, name+'.svg')
         else:
-            folder = self.settings.value('projFolder')
+            if self.settings.value('lastOutputDir'):
+                folder = self.settings.value('lastOutputDir')
+            else:
+                folder = self.settings.value('projFolder')
 
-        fileName = QFileDialog.getSaveFileName(
-            caption="Save Plot As .svg file",
-            directory=folder,
-            filter="Scalable Vector Graphics(*.svg)")
+            fileName = QFileDialog.getSaveFileName(
+                caption="Save Plot As .svg file",
+                directory=folder,
+                filter="Scalable Vector Graphics(*.svg)")
 
         if fileName:
             pix = QSvgGenerator()
             pix.setFileName(fileName)
             pix.setSize(QSize(600, 400))
 
-            title = self.settings.value('figureTitle')
+            if not title:
+                title = self.settings.value('figureTitle')
             plotWidget.setTitle(title)
             legend = QwtLegend()
             plotWidget.insertLegend(legend)
@@ -317,61 +321,23 @@ class plotTool:
             plotWidget.setAxisTitle(QwtPlot.yLeft, None)
             plotWidget.setTitle(None)
 
-    def outPNG(self, plotWidget):
-        if self.settings.value('lastOutputDir'):
-            folder = self.settings.value('lastOutputDir')
+    def outPNG(self, plotWidget, d_folder, name, title):
+        if d_folder:
+            fileName = os.path.join(d_folder, name+'.png')
         else:
-            folder = self.settings.value('projFolder')
+            if self.settings.value('lastOutputDir'):
+                folder = self.settings.value('lastOutputDir')
+            else:
+                folder = self.settings.value('projFolder')
 
-        fileName = QFileDialog.getSaveFileName(
-            caption="Save Plot As .png file",
-            directory=folder,
-            filter="Portable Network Graphics (*.png)")
+            fileName = QFileDialog.getSaveFileName(
+                caption="Save Plot As .png file",
+                directory=folder,
+                filter="Portable Network Graphics (*.png)")
 
         if fileName:
-            title = self.settings.value('figureTitle')
-            plotWidget.setTitle(title)
-            pix = QPixmap(QSize(600, 400))
-            sh = QBrush(pix)
-            sh.setColor(Qt.white)
-            sh.setStyle(Qt.SolidPattern)
-            painter = QPainter()
-            painter.begin(pix)
-            painter.setBrush(sh)
-            painter.drawRect(0, 0, 600, 400)
-            painter.end()
-
-            legend = QwtLegend()
-            plotWidget.insertLegend(legend)
-            plotWidget.setAxisTitle(
-                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
-            plotWidget.setAxisTitle(
-                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
-
-            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
-            filter = QwtPlotPrintFilter()
-            filter.setOptions(QwtPlotPrintFilter.PrintAll
-                              & ~QwtPlotPrintFilter.PrintBackground)
-            plotWidget.print_(pix, filter)
-            pix.save(fileName)
-            plotWidget.insertLegend(None)
-            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
-            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
-            plotWidget.setTitle(None)
-
-    def outJPG(self, plotWidget):
-        if self.settings.value('lastOutputDir'):
-            folder = self.settings.value('lastOutputDir')
-        else:
-            folder = self.settings.value('projFolder')
-
-        fileName = QFileDialog.getSaveFileName(
-            caption="Save Plot As .jpg file",
-            directory=folder,
-            filter="JPEG(*.jpg;*.jpeg)")
-
-        if fileName:
-            title = self.settings.value('figureTitle')
+            if not title:
+                title = self.settings.value('figureTitle')
             plotWidget.setTitle(title)
             pix = QPixmap(QSize(600, 400))
             sh = QBrush(pix)
@@ -401,19 +367,23 @@ class plotTool:
             plotWidget.setAxisTitle(QwtPlot.yLeft, None)
             plotWidget.setTitle(None)
 
-    def outBMP(self, plotWidget):
-        if self.settings.value('lastOutputDir'):
-            folder = self.settings.value('lastOutputDir')
+    def outJPG(self, plotWidget, d_folder, name, title):
+        if d_folder:
+            fileName = os.path.join(d_folder, name+'.jpg')
         else:
-            folder = self.settings.value('projFolder')
+            if self.settings.value('lastOutputDir'):
+                folder = self.settings.value('lastOutputDir')
+            else:
+                folder = self.settings.value('projFolder')
 
-        fileName = QFileDialog.getSaveFileName(
-            caption="Save Plot As .bmp file",
-            directory=folder,
-            filter="bitmap (*.bmp)")
+            fileName = QFileDialog.getSaveFileName(
+                caption="Save Plot As .jpg file",
+                directory=folder,
+                filter="JPEG(*.jpg;*.jpeg)")
 
         if fileName:
-            title = self.settings.value('figureTitle')
+            if not title:
+                title = self.settings.value('figureTitle')
             plotWidget.setTitle(title)
             pix = QPixmap(QSize(600, 400))
             sh = QBrush(pix)
@@ -443,19 +413,23 @@ class plotTool:
             plotWidget.setAxisTitle(QwtPlot.yLeft, None)
             plotWidget.setTitle(None)
 
-    def outTIF(self, plotWidget):
-        if self.settings.value('lastOutputDir'):
-            folder = self.settings.value('lastOutputDir')
+    def outBMP(self, plotWidget, d_folder, name, title):
+        if d_folder:
+            fileName = os.path.join(d_folder, name+'.bmp')
         else:
-            folder = self.settings.value('projFolder')
+            if self.settings.value('lastOutputDir'):
+                folder = self.settings.value('lastOutputDir')
+            else:
+                folder = self.settings.value('projFolder')
 
-        fileName = QFileDialog.getSaveFileName(
-            caption="Save Plot As .tif file",
-            directory=folder,
-            filter="Tagged Image File Format (*.tif;*.tiff)")
+            fileName = QFileDialog.getSaveFileName(
+                caption="Save Plot As .bmp file",
+                directory=folder,
+                filter="bitmap (*.bmp)")
 
         if fileName:
-            title = self.settings.value('figureTitle')
+            if not title:
+                title = self.settings.value('figureTitle')
             plotWidget.setTitle(title)
             pix = QPixmap(QSize(600, 400))
             sh = QBrush(pix)
@@ -485,19 +459,23 @@ class plotTool:
             plotWidget.setAxisTitle(QwtPlot.yLeft, None)
             plotWidget.setTitle(None)
 
-    def outXBM(self, plotWidget):
-        if self.settings.value('lastOutputDir'):
-            folder = self.settings.value('lastOutputDir')
+    def outTIF(self, plotWidget, d_folder, name, title):
+        if d_folder:
+            fileName = os.path.join(d_folder, name+'.tif')
         else:
-            folder = self.settings.value('projFolder')
+            if self.settings.value('lastOutputDir'):
+                folder = self.settings.value('lastOutputDir')
+            else:
+                folder = self.settings.value('projFolder')
 
-        fileName = QFileDialog.getSaveFileName(
-            caption="Save Plot As .xbm file",
-            directory=folder,
-            filter="X Bitmap (*.xbm)")
+            fileName = QFileDialog.getSaveFileName(
+                caption="Save Plot As .tif file",
+                directory=folder,
+                filter="Tagged Image File Format (*.tif;*.tiff)")
 
         if fileName:
-            title = self.settings.value('figureTitle')
+            if not title:
+                title = self.settings.value('figureTitle')
             plotWidget.setTitle(title)
             pix = QPixmap(QSize(600, 400))
             sh = QBrush(pix)
@@ -527,19 +505,69 @@ class plotTool:
             plotWidget.setAxisTitle(QwtPlot.yLeft, None)
             plotWidget.setTitle(None)
 
-    def outXPM(self, plotWidget):
-        if self.settings.value('lastOutputDir'):
-            folder = self.settings.value('lastOutputDir')
+    def outXBM(self, plotWidget, d_folder, name, title):
+        if d_folder:
+            fileName = os.path.join(d_folder, name+'.xbm')
         else:
-            folder = self.settings.value('projFolder')
+            if self.settings.value('lastOutputDir'):
+                folder = self.settings.value('lastOutputDir')
+            else:
+                folder = self.settings.value('projFolder')
 
-        fileName = QFileDialog.getSaveFileName(
-            caption="Save Plot As .xpm file",
-            directory=folder,
-            filter="X Pixmap (*.xpm)")
+            fileName = QFileDialog.getSaveFileName(
+                caption="Save Plot As .xbm file",
+                directory=folder,
+                filter="X Bitmap (*.xbm)")
 
         if fileName:
-            title = self.settings.value('figureTitle')
+            if not title:
+                title = self.settings.value('figureTitle')
+            plotWidget.setTitle(title)
+            pix = QPixmap(QSize(600, 400))
+            sh = QBrush(pix)
+            sh.setColor(Qt.white)
+            sh.setStyle(Qt.SolidPattern)
+            painter = QPainter()
+            painter.begin(pix)
+            painter.setBrush(sh)
+            painter.drawRect(0, 0, 600, 400)
+            painter.end()
+
+            legend = QwtLegend()
+            plotWidget.insertLegend(legend)
+            plotWidget.setAxisTitle(
+                QwtPlot.xBottom, self.settings.value('xAxisTitle'))
+            plotWidget.setAxisTitle(
+                QwtPlot.yLeft, self.settings.value('yAxisTitle'))
+
+            QSettings().setValue("lastOutputDir", os.path.dirname(fileName))
+            filter = QwtPlotPrintFilter()
+            filter.setOptions(QwtPlotPrintFilter.PrintAll
+                              & ~QwtPlotPrintFilter.PrintBackground)
+            plotWidget.print_(pix, filter)
+            pix.save(fileName)
+            plotWidget.insertLegend(None)
+            plotWidget.setAxisTitle(QwtPlot.xBottom, None)
+            plotWidget.setAxisTitle(QwtPlot.yLeft, None)
+            plotWidget.setTitle(None)
+
+    def outXPM(self, plotWidget, d_folder, name, title):
+        if d_folder:
+            fileName = os.path.join(d_folder, name+'.xpm')
+        else:
+            if self.settings.value('lastOutputDir'):
+                folder = self.settings.value('lastOutputDir')
+            else:
+                folder = self.settings.value('projFolder')
+
+            fileName = QFileDialog.getSaveFileName(
+                caption="Save Plot As .xpm file",
+                directory=folder,
+                filter="X Pixmap (*.xpm)")
+
+        if fileName:
+            if not title:
+                title = self.settings.value('figureTitle')
             plotWidget.setTitle(title)
             pix = QPixmap(QSize(600, 400))
             sh = QBrush(pix)

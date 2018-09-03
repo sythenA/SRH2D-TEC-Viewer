@@ -6,14 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>799</width>
-    <height>539</height>
+    <width>800</width>
+    <height>580</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>800</width>
+    <height>580</height>
+   </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>799</width>
-    <height>539</height>
+    <width>800</width>
+    <height>580</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -23,7 +29,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>10</y>
+     <y>30</y>
      <width>231</width>
      <height>21</height>
     </rect>
@@ -43,46 +49,39 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>497</y>
+     <y>527</y>
      <width>91</width>
      <height>31</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Reset Plot Axis</string>
    </property>
    <property name="text">
     <string>Reset</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="exportBtn">
+  <widget class="QPushButton" name="exportPicBtn">
    <property name="geometry">
     <rect>
      <x>130</x>
-     <y>497</y>
-     <width>81</width>
+     <y>527</y>
+     <width>91</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Export</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="plotSettingsBtn">
-   <property name="geometry">
-    <rect>
-     <x>220</x>
-     <y>497</y>
-     <width>31</width>
-     <height>31</height>
-    </rect>
+   <property name="toolTip">
+    <string>Export Profile Plot As Picture</string>
    </property>
    <property name="text">
-    <string/>
+    <string>Export As Pic</string>
    </property>
   </widget>
   <widget class="QTreeWidget" name="TecFileList">
    <property name="geometry">
     <rect>
      <x>460</x>
-     <y>77</y>
+     <y>107</y>
      <width>321</width>
      <height>251</height>
     </rect>
@@ -97,7 +96,7 @@
    <property name="geometry">
     <rect>
      <x>460</x>
-     <y>337</y>
+     <y>367</y>
      <width>321</width>
      <height>151</height>
     </rect>
@@ -112,7 +111,7 @@
    <property name="geometry">
     <rect>
      <x>260</x>
-     <y>10</y>
+     <y>20</y>
      <width>101</width>
      <height>31</height>
     </rect>
@@ -125,7 +124,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>77</y>
+     <y>107</y>
      <width>431</width>
      <height>411</height>
     </rect>
@@ -152,12 +151,91 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>40</y>
+     <y>70</y>
      <width>231</width>
      <height>31</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="layerComboLayout"/>
+  </widget>
+  <widget class="QWidget" name="verticalLayoutWidget_4">
+   <property name="geometry">
+    <rect>
+     <x>270</x>
+     <y>70</y>
+     <width>231</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="layoutForField"/>
+  </widget>
+  <widget class="QPushButton" name="exportTextBtn">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>527</y>
+     <width>91</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Export Profile As Text</string>
+   </property>
+   <property name="text">
+    <string>Export As Text</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="exportSettingBtn">
+   <property name="geometry">
+    <rect>
+     <x>350</x>
+     <y>527</y>
+     <width>41</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="moveForwardBtn">
+   <property name="geometry">
+    <rect>
+     <x>690</x>
+     <y>530</y>
+     <width>41</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="moveBackwardBtn">
+   <property name="geometry">
+    <rect>
+     <x>740</x>
+     <y>530</y>
+     <width>41</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="batchChecker">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>540</y>
+     <width>151</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Batch Export</string>
+   </property>
   </widget>
  </widget>
  <resources/>

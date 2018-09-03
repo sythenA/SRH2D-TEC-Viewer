@@ -47,11 +47,14 @@ class profilePlot(QWidget):
         else:
             self.loaddirectory = ''
 
+        self.profileSec = profileSec(self.iface, self)
+
         # profile settings
         registry = QgsMapLayerRegistry.instance()
         registry.legendLayersAdded.connect(self.layerFromRegistry)
         self.dlg.methodSelector.currentIndexChanged.connect(
             self.changeOfMethod)
+        self.dlg.exportTextBtn.clicked.connect(self.exportText)
 
     def activateDrawProfileCS(self):
         # Save the standard mapttool for restoring it at the end
@@ -76,6 +79,10 @@ class profilePlot(QWidget):
         if result:
             pass
 
+    def exportText(self):
+        profileSec = self.profileSec
+        profileSec.exportText()
+
     def setLayerList(self, TEC_Container):
         for item in TEC_Container:
             self.dlg.TecFileList.addTopLevelItem(
@@ -83,7 +90,11 @@ class profilePlot(QWidget):
 
     def layerFromRegistry(self):
         self.dlg.TecFileList.clear()
-        root = QgsProject.instance().layerTreeRoot()
+        try:
+            root = QgsProject.instance().layerTreeRoot()
+        except(AttributeError):
+            return
+
         for node in root.children():
             if len(node.children()) > 0:
                 pWidget = QTreeWidgetItem(self.dlg.TecFileList)
@@ -123,10 +134,9 @@ class profilePlot(QWidget):
     def changeOfMethod(self, idx):
         if idx == 0:
             self.toolrenderer.changeToHandDraw()
-            self.cursor = QCursor(Qt.CrossCursor)
+            self.iface.mapCanvas().setCursor(QCursor(Qt.CrossCursor))
         elif idx == 1:
             layer = self.dlg.layerCombo.currentLayer()
             self.iface.setActiveLayer(layer)
-            self.toolrenderer.deactivate()
             self.iface.mapCanvas().setCursor(QCursor(Qt.PointingHandCursor))
             self.toolrenderer.changeToSelectLine()

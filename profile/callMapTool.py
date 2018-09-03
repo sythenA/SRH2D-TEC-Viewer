@@ -35,7 +35,7 @@ class profileSec(QWidget):
 
         self.dlg.moveForwardBtn.clicked.connect(self.moveForward)
         self.dlg.moveBackwardBtn.clicked.connect(self.moveBackward)
-        self.dlg.exportPicBtn.clicked.connect(self.exportPlot)
+        self.dlg.exportPicBtn.clicked.connect(self.selectPlotExport)
 
     def getProfile(self, pointstoDraw, toolRenderer):
         self.rubberbandbuf.reset()
@@ -197,6 +197,13 @@ class profileSec(QWidget):
 
         if plotProfile:
             self.plotProfiles()
+
+    def selectPlotExport(self):
+        if self.dlg.batchChecker.checkState() == 2:
+            layer = self.dlg.layerCombo.currentLayer()
+            self.batchExportPlot(layer)
+        else:
+            self.exportPlot()
 
     def batchExportAsTxt(self, layer, f):
         features = layer.selectedFeatures()
@@ -360,28 +367,67 @@ class profileSec(QWidget):
                     self.batchExportAsXls(layer, wb)
                 wb.save(exportFile)
 
-    def exportPlot(self):
+    def exportPlot(self, folder=None, name=None, title=None):
         if self.settings.value('profilePlotExport') == '.png':
             plotWidget = self.dlg.plotWidget
-            plotTool().outPNG(plotWidget)
+            plotTool().outPNG(plotWidget, folder, name, title)
         elif self.settings.value('profilePlotExport') == '.jpg':
             plotWidget = self.dlg.plotWidget
-            plotTool().outJPG(plotWidget)
+            plotTool().outJPG(plotWidget, folder, name, title)
         elif self.settings.value('profilePlotExport') == '.bmp':
             plotWidget = self.dlg.plotWidget
-            plotTool().outBMP(plotWidget)
+            plotTool().outBMP(plotWidget, folder, name, title)
         elif self.settings.value('profilePlotExport') == '.svg':
             plotWidget = self.dlg.plotWidget
-            plotTool().outSVG(plotWidget)
+            plotTool().outSVG(plotWidget, folder, name, title)
         elif self.settings.value('profilePlotExport') == '.tiff':
             plotWidget = self.dlg.plotWidget
-            plotTool().outTIF(plotWidget)
+            plotTool().outTIF(plotWidget, folder, name, title)
         elif self.settings.value('profilePlotExport') == '.xbm':
             plotWidget = self.dlg.plotWidget
-            plotTool().outXBM(plotWidget)
+            plotTool().outXBM(plotWidget, folder, name, title)
         elif self.settings.value('profilePlotExport') == '.xpm':
             plotWidget = self.dlg.plotWidget
-            plotTool().outXPM(plotWidget)
+            plotTool().outXPM(plotWidget, folder, name, title)
+
+    def batchExportPlot(self, layer):
+        features = layer.selectedFeatures()
+
+        mapTool = QgsMapTool(self.iface.mapCanvas())
+        FieldName = self.dlg.fieldCombo.currentField()
+
+        projFolder = self.settings.value('projFolder')
+        outputFolder = QFileDialog.getExistingDirectory(
+            directory=projFolder,
+            caption='Choose the folder to export profile plots')
+
+        if outputFolder:
+            for feature in features:
+                title = feature[FieldName]
+                if not title:
+                    title = 'profile'
+                self.profiles = list()
+                pointstoDraw = list()
+
+                # Get feature geometry
+                first_segment = True
+                if first_segment:
+                    k = 0
+                    first_segment = False
+                else:
+                    k = 1
+                while not feature.geometry().vertexAt(k) == QgsPoint(0, 0):
+                    point2 = mapTool.toMapCoordinates(
+                        layer, QgsPointXY(feature.geometry().vertexAt(k)))
+                    pointstoDraw += [[point2.x(), point2.y()]]
+                    k += 1
+                self.updateProfile(pointstoDraw, mapTool, False)
+                if self.profiles:
+                    self.exportPlot(folder=outputFolder,
+                                    name=str(feature.id()).zfill(3),
+                                    title=str(title))
+                    plotTool().clearData(self.dlg.plotWidget, self.profiles)
+                    self.dlg.activeLayerList.clear()
 
 
 QtCorlors = {1: Qt.black, 2: Qt.red, 3: Qt.darkRed, 4: Qt.green,
