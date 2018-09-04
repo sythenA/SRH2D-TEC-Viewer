@@ -443,7 +443,7 @@ class profileListItem(QListWidgetItem):
     lineStyle = Qt.SolidLine
 
     def __init__(self, profile, parent):
-        self.name = profile['TECName'] + '_' + profile['layer'].name()
+        self.name = profile['layer'].name()
         self.layer = profile['layer']
         super(profileListItem, self).__init__(self.name, parent)
         self.parent = parent
