@@ -31,6 +31,7 @@ from qgis.gui import QgsGenericProjectionSelector
 from itertools import izip as zip, count
 from .TECSettings.TECSettings import TECSettings as TecSettings
 from .tools.TECfile import TECfile, TEClayerBox
+from .tools.toUnicode import toUnicode
 from .profile.profilePlot import profilePlot
 from .contour.contourPlot import contourPlot
 from .makeKml.kmlExport import kmlExport
@@ -250,11 +251,13 @@ class TECView:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result == 1:
-            self.settings.setValue('projFolder',
-                                   str(self.dlg.projFolderEdit.text()))
-            profileDiag = profilePlot(self.iface,
-                                      self.dlg.projFolderEdit.text(),
-                                      TEC_Box=self.TEC_Container)
+            self.settings.setValue(
+                'projFolder',
+                toUnicode(self.dlg.projFolderEdit.text()))
+            profileDiag = profilePlot(
+                self.iface,
+                toUnicode(self.dlg.projFolderEdit.text()),
+                TEC_Box=self.TEC_Container)
             profileDiag.run()
 
     def selectProjFolder(self):
@@ -265,7 +268,7 @@ class TECView:
         caption = 'Please choose a project folder'
         folderName = QFileDialog.getExistingDirectory(self.dlg, caption,
                                                       presetFolder)
-        self.dlg.projFolderEdit.setText(folderName)
+        self.dlg.projFolderEdit.setText(toUnicode(folderName))
 
     def selectCrs(self):
         crsDiag = QgsGenericProjectionSelector()
@@ -278,11 +281,14 @@ class TECView:
 
     def selectTECFile(self):
         Caption = 'Please select a _TEC_.dat file or multiple files'
-        projFolder = self.dlg.projFolderEdit.text()
+        projFolder = toUnicode(self.dlg.projFolderEdit.text())
         filePathes = QFileDialog.getOpenFileNames(
             self.dlg, Caption, os.path.join(projFolder, 'sim'), "*.dat")
         for path in filePathes:
-            fileWidget = TECfile(self.dlg.fileListWidget, 0, path, self.iface)
+            path = toUnicode(path)
+            fileWidget = TECfile(self.dlg.fileListWidget, 0,
+                                 toUnicode(path),
+                                 self.iface)
             self.dlg.fileListWidget.addItem(fileWidget)
 
     def removeTECfile(self):
@@ -334,11 +340,11 @@ class TECView:
                     self.changeAttrToCancel(TECitem, attrName)
 
     def loadTECfiles(self):
-        projFolder = self.dlg.projFolderEdit.text()
-        outFolder = os.path.join(projFolder, 'TECView')
+        projFolder = toUnicode(self.dlg.projFolderEdit.text())
+        outFolder = os.path.join(projFolder, u'TECView')
         self.TEC_Container = list()
         if not os.path.isdir(outFolder):
-            os.system('mkdir ' + outFolder)
+            os.system('mkdir ' + outFolder.encode('big5'))
         self.attrs()
         for i in range(0, self.dlg.fileListWidget.count()):
             TECitem = self.dlg.fileListWidget.item(i)
@@ -383,9 +389,6 @@ class TECView:
     def exportTEC(self):
         item = self.dlg.fileListWidget.currentItem()
         folder = os.path.dirname(item.filePath)
-        folder = QFileDialog.getExistingDirectory(self.dlg,
-                                                  'Select Output Folder',
-                                                  folder)
         tecName = item.fileName
         self.iface.messageBar().pushMessage('Export ' + tecName + ' to ' +
                                             folder)

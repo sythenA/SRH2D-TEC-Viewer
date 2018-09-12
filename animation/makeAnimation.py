@@ -1,18 +1,25 @@
-# -*-coding:big5-*-
+# -*-coding:utf-8-*-
 import os
 from qgis.PyQt import QtGui, uic
 from qgis.PyQt.QtCore import QSettings, Qt, QSize
 from qgis.PyQt.QtGui import QListWidgetItem, QFileDialog, QImage, QColor
-from qgis.PyQt.QtGui import QPixmap, QIcon, QPainter, QMessageBox
+from qgis.PyQt.QtGui import QPixmap, QIcon, QPainter, QMessageBox, QFont
 from qgis.core import QgsMapLayerRegistry, QgsMapRenderer, QgsRectangle
-from qgis.core import QgsMapLayer, QgsRasterPipe, QgsRasterFileWriter
+from qgis.core import QgsRasterPipe, QgsRasterFileWriter
+from qgis.core import QgsComposition, QgsComposerMap, QgsComposerLabel
+from qgis.core import QgsMapSettings, QgsComposerLegend, QgsProject
+from qgis.core import QgsComposerScaleBar
+from qgis.PyQt.QtXml import QDomDocument
+from msg import msgZhTW
+from ..tools.toUnicode import toUnicode
 import subprocess
-from shutil import copyfile
 import _winreg
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'animation.ui'))
+
+message = msgZhTW
 
 
 class layerItem(QListWidgetItem):
@@ -63,15 +70,22 @@ class animationDiag(QtGui.QDialog, FORM_CLASS):
     def newLayersAdded(self, newLayers):
         if newLayers:
             for layer in newLayers:
-                item = layerItem(layer, self.layerList)
-                self.layerList.addItem(item)
+                try:
+                    item = layerItem(layer, self.layerList)
+                    self.layerList.addItem(item)
+                except(TypeError):
+                    pass
 
     def layersRemoved(self, removedLayers):
         if removedLayers:
             for layerId in removedLayers:
                 layer = self.registry.mapLayer(layerId)
-                itemList = self.layerList.findItems(layer.name(),
-                                                    Qt.MatchExactly)
+                try:
+                    itemList = self.layerList.findItems(layer.name(),
+                                                        Qt.MatchExactly)
+                except(AttributeError):
+                    return
+
                 if itemList:
                     for item in itemList:
                         idx = self.layerList.row(item)
@@ -96,34 +110,149 @@ class makeAnimation:
     def __init__(self, iface):
         self.iface = iface
         self.dlg = animationDiag(self.iface)
+        self.registry = QgsMapLayerRegistry.instance()
         self.settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
+
+    def loadTemplate(self, template):
+        '''Load a print composer template from provided filename argument
+
+        Args:
+          template: readable .qpt template filename
+
+        Returns:
+          myComposition: a QgsComposition loaded from the provided template
+          mapSettings: a QgsMapSettings object associated with myComposition'''
+        mapSettings = QgsMapSettings()
+        myComposition = QgsComposition(mapSettings)
+        # Load template from filename
+        with open(template, 'r') as templateFile:
+            myTemplateContent = templateFile.read()
+
+        myDocument = QDomDocument()
+        myDocument.setContent(myTemplateContent)
+        myComposition.loadFromTemplate(myDocument)
+
+        return myComposition, mapSettings
 
     def run(self):
         self.dlg.show()
         result = self.dlg.exec_()
-        if result:
-            self.workingFolder = QFileDialog.getExistingDirectory(
-                directory=self.settings.value('projFolder'))
-            self.renderLayers()
+        if result == 1:
+            self.workingFolder = toUnicode(QFileDialog.getExistingDirectory(
+                directory=self.settings.value('projFolder')))
             self.settings.setValue('animeName', self.dlg.outputNameEdit.text())
             self.settings.setValue('animeLapse',
                                    int(self.dlg.timeLapseEdit.text()))
-            if self.dlg.exportTypeCombo.currentText() == '.gif':
-                self.genGif()
-            elif self.dlg.exportTypeCombo.currentText() == '.mp4':
-                self.genMp4()
+            if self.workingFolder:
+                # Load map export template from .qgs file
+                # composer, mapSet = self.loadTemplate(template)
+                self.renderLayers()
+
+                if self.dlg.exportTypeCombo.currentText() == '.gif':
+                    self.genGif()
+                elif self.dlg.exportTypeCombo.currentText() == '.mp4':
+                    self.genMp4()
 
     def renderLayers(self):
         self.renderedLayerList = list()
         for i in range(0, self.dlg.layerList.count()):
             item = self.dlg.layerList.item(i)
             layer = item.layer
-            if layer.type() == QgsMapLayer.VectorLayer:
-                picPath = self.vectorLayerRender(layer, str(i+1).zfill(3))
-                self.renderedLayerList.append(picPath)
-            elif layer.type() == QgsMapLayer.RasterLayer:
-                picPath = self.rasterLayerRender(layer, str(i+1).zfill(3))
-                self.renderedLayerList.append(picPath)
+            picName = self.layerRenderByComposer(layer, str(i+1).zfill(3))
+            self.renderedLayerList.append(picName)
+        self.showAllLayers()
+        """
+        if layer.type() == QgsMapLayer.VectorLayer:
+            picPath = self.vectorLayerRender(layer, str(i+1).zfill(3))
+            self.renderedLayerList.append(picPath)
+        elif layer.type() == QgsMapLayer.RasterLayer:
+            picPath = self.rasterLayerRender(layer, str(i+1).zfill(3))
+            self.renderedLayerList.append(picPath)"""
+
+    def buildLegendLayerTree(self, root, layers):
+        for child in root.children():
+            # if the child is a group node, not a layer
+            if child.nodeType() == 0:
+                child = self.buildLegendLayerTree(child, layers)
+            else:  # if it is a layer
+                if child.layer() not in layers:
+                    root.removeChildNode(child)
+        return root
+
+    def layerRenderByComposer(self, layer, outName):
+        self.hideOtherLayers(layer)
+        mapRenderer = self.iface.mapCanvas().mapRenderer()
+        mapRenderer.setLayerSet([layer.id()])
+        c = QgsComposition(mapRenderer)
+        c.setPlotStyle(QgsComposition.Print)
+        c.setPaperSize(297, 210)
+        c.setPrintResolution(300)
+
+        x, y = 0, 0
+        w, h = c.paperWidth(), c.paperHeight()
+        composerMap = QgsComposerMap(c, x, y, w, h)
+        composerMap.setMapCanvas(self.iface.mapCanvas())
+        c.addItem(composerMap)
+
+        legend = QgsComposerLegend(c)
+        root = QgsProject.instance().layerTreeRoot().clone()
+        root = self.buildLegendLayerTree(root, [layer])
+        legend.modelV2().setRootGroup(root)
+        legend.setItemPosition(250, 20)
+        legend.setResizeToContents(True)
+        c.addItem(legend)
+
+        label = QgsComposerLabel(c)
+        label.setMarginX(125)
+        label.setMarginY(10)
+        label.setText(layer.name())
+        label.setFont(QFont('PMinliu', 20, QFont.Bold))
+        label.adjustSizeToText()
+        c.addItem(label)
+
+        item = QgsComposerScaleBar(c)
+        item.setStyle('Double Box')  # optionally modify the style
+        item.setComposerMap(composerMap)
+        item.applyDefaultSize()
+        item.setItemPosition(10, 190)
+        c.addItem(item)
+
+        dpmm = 300/25.4
+        width = int(dpmm * c.paperWidth())
+        width = int(width/2)*2
+        height = int(dpmm * c.paperHeight())
+        height = int(height/2)*2
+        Dots = int(dpmm*1000/2)*2
+
+        # create output image and initialize it
+        image = QImage(QSize(width, height), QImage.Format_ARGB32)
+        image.setDotsPerMeterX(Dots)
+        image.setDotsPerMeterY(Dots)
+        image.fill(0)
+
+        # render the composition
+        imagePainter = QPainter(image)
+        c.renderPage(imagePainter, 0)
+        imagePainter.end()
+
+        outName = os.path.join(self.workingFolder, outName+'.png')
+        image.save(outName, "png")
+
+        return outName
+
+    def hideOtherLayers(self, layer):
+        allMapLayers = self.registry.mapLayers()
+        for key in allMapLayers.keys():
+            _layer = self.registry.mapLayer(key)
+            self.iface.legendInterface().setLayerVisible(_layer, False)
+
+        self.iface.legendInterface().setLayerVisible(layer, True)
+        self.iface.mapCanvas().refresh()
+
+    def showAllLayers(self):
+        for key in self.registry.mapLayers().keys():
+            layer = self.registry.mapLayer(key)
+            self.iface.legendInterface().setLayerVisible(layer, True)
 
     def vectorLayerRender(self, layer, outName):
         img = QImage(QSize(1600, 900), QImage.Format_ARGB32_Premultiplied)
@@ -184,8 +313,8 @@ class makeAnimation:
                                     'magick.exe')
         except(WindowsError):
             msg.setIcon(QMessageBox.Critical)
-            msg = u'輸出.gif動畫需要安裝ImageMagick\n請先安裝ImageMagick再使用.gif動畫輸出功能'
-            msg.setWindowTitle(u'找不到已安裝的ImageMgick版本')
+            msg = message['msg01']
+            msg.setWindowTitle(message['msg02'])
             msg.setText(message)
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
@@ -193,18 +322,19 @@ class makeAnimation:
             return None
 
         lapse = int(self.dlg.timeLapseEdit.text())
-        cmd = ['cmd', '/c', pathName, 'convert', '-loop', '0', '-delay',
-               str(lapse)+'x1']
+        cmd = ['cmd', '/c', toUnicode(pathName).encode('big5'), 'convert',
+               '-loop', '0', '-delay', str(lapse)+'x1']
         for path in self.renderedLayerList:
             cmd.append(path)
 
         outName = self.dlg.outputNameEdit.text() + '.gif'
 
-        cmd.append(os.path.join(self.workingFolder, outName))
-        subprocess.Popen(cmd, shell=True)
+        cmd.append(
+            toUnicode(os.path.join(self.workingFolder, outName)).encode('big5'))
+        subprocess.call(cmd, shell=True)
         msg.setIcon(QMessageBox.Information)
-        msg.setText(u'輸出.gif完成')
-        msg.setWindowTitle(u'輸出完成')
+        msg.setText(message['msg03'])
+        msg.setWindowTitle(message['msg04'])
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
 
@@ -216,24 +346,26 @@ class makeAnimation:
         lapse = int(self.dlg.timeLapseEdit.text())
         cmd = (ffmpegPath + ' -r' + ' 1/'+str(lapse) + ' -start_number' +
                ' 0' + ' -i ' +
-               os.path.join(self.workingFolder, '%03d.tiff') + ' -c:v' +
-               ' libx264' + ' -r' + ' 30' + ' -pix_fmt' + ' yuv420p ' +
-               os.path.join(self.workingFolder,
-                            self.dlg.outputNameEdit.text())+'.mp4'
-               )
+               toUnicode(os.path.join(self.workingFolder, '%03d.png')).encode('big5') +
+               ' -c:v' + ' libx264' + ' -r' + ' 30' + ' -pix_fmt' +
+               ' yuv420p ' +
+               toUnicode(os.path.join(self.workingFolder,
+                         self.dlg.outputNameEdit.text())).encode('big5')
+               + '.mp4')
         subprocess.Popen(['cmd', '/c', 'del',
-                          os.path.join(self.workingFolder
-                                       , self.dlg.outputNameEdit.text())+'.mp4'])
+                          toUnicode(os.path.join(self.workingFolder,
+                                       self.dlg.outputNameEdit.text())).encode('big5')
+                          +'.mp4'])
         t = subprocess.call(cmd, shell=True)
         if t == 0:
             msg.setIcon(QMessageBox.Information)
-            msg.setText(u'輸出.mp4完成')
-            msg.setWindowTitle(u'輸出完成')
+            msg.setText(message['msg05'])
+            msg.setWindowTitle(message['msg06'])
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
         elif t == 1:
-            msg.setIcon(QMessageBox.critical)
-            msg.setText(u'輸出.mp4失敗')
-            msg.setWindowTitle(u'輸出失敗')
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText(message['msg07'])
+            msg.setWindowTitle(message['msg08'])
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()

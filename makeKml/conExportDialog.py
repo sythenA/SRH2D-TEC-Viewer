@@ -2,6 +2,7 @@
 import os
 from qgis.PyQt import QtGui, uic
 from qgis.PyQt.QtCore import pyqtSignal
+from ..tools.toUnicode import toUnicode
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -15,7 +16,8 @@ class conExportDiag(QtGui.QDialog, FORM_CLASS):
         super(conExportDiag, self).__init__(parent)
         self.setupUi(self)
         folder = os.path.dirname(os.path.dirname(__file__))
-        pixmap = QtGui.QPixmap(os.path.join(folder, 'Georeference.svg'))
+        folder = toUnicode(folder)
+        pixmap = QtGui.QPixmap(os.path.join(folder, u'Georeference.svg'))
         icon = QtGui.QIcon(pixmap)
         self.selectGeoRefBtn.setIcon(icon)
         self.selectGeoRefBtn.setIconSize(self.selectGeoRefBtn.size())

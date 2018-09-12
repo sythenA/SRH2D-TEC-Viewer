@@ -11,6 +11,7 @@ from qgis.PyQt.QtSvg import QSvgGenerator
 from .lineStyleDiag import lineStyleSelector
 from .plotTool import plotTool
 from .dataReaderTool import DataReaderTool
+from ..tools.toUnicode import toUnicode
 from random import randint
 import xlwt
 
@@ -336,6 +337,7 @@ class profileSec(QWidget):
         if self.settings.value('profileTextExport') == '.txt':
             exportFile = QFileDialog.getSaveFileName(
                 directory=projFolder, filter='Text files(*.txt)')
+            exportFile = toUnicode(exportFile)
             if self.profiles and exportFile:
                 f = open(exportFile, 'w')
                 if self.dlg.batchChecker.checkState() == 0:
@@ -348,6 +350,7 @@ class profileSec(QWidget):
         elif self.settings.value('profileTextExport') == '.csv':
             exportFile = QFileDialog.getSaveFileName(
                 directory=projFolder, filter='Text files(*.csv)')
+            exportFile = toUnicode(exportFile)
             if self.profiles and exportFile:
                 f = open(exportFile, 'w')
                 if self.dlg.batchChecker.checkState() == 0:
@@ -360,6 +363,7 @@ class profileSec(QWidget):
         elif self.settings.value('profileTextExport') == '.xls':
             exportFile = QFileDialog.getSaveFileName(
                 directory=projFolder, filter='Excel Workbook(*.xls)')
+            exportFile = toUnicode(exportFile)
             if self.profiles and exportFile:
                 wb = xlwt.Workbook()
                 if self.dlg.batchChecker.checkState() == 0:
@@ -403,6 +407,7 @@ class profileSec(QWidget):
         outputFolder = QFileDialog.getExistingDirectory(
             directory=projFolder,
             caption='Choose the folder to export profile plots')
+        outputFolder = toUnicode(outputFolder)
 
         if outputFolder:
             for feature in features:

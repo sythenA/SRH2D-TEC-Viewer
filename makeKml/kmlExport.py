@@ -8,6 +8,7 @@ from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform
 from qgis.gui import QgsGenericProjectionSelector
 from qgis.PyQt.QtGui import QListWidgetItem, QFileDialog
 from qgis.PyQt.QtCore import Qt, QSettings
+from ..tools.toUnicode import toUnicode
 
 
 installed_packages = pip.get_installed_distributions()
@@ -15,6 +16,7 @@ installed_packages = sorted(["%s" % i.key for i in installed_packages])
 if "simplekml" not in installed_packages:
     orgCwd = os.getcwd()
     inst_folder = os.path.join(os.path.dirname(__file__), 'simplekml')
+    inst_folder = toUnicode(inst_folder)
     os.chdir(inst_folder)
     subprocess.call(['python', 'setup.py', 'install'])
     os.chdir(orgCwd)
@@ -43,6 +45,7 @@ class contourLayerItem(QListWidgetItem):
         self.conValues = sorted(list(conValues))
 
     def exportToKml(self, folder):
+        folder = toUnicode(folder)
         orgCwd = os.getcwd()
         if os.path.isdir(os.path.join(folder, self.name)):
             subprocess.call(['RD', os.path.join(folder, self.name)],
@@ -68,7 +71,7 @@ class contourLayerItem(QListWidgetItem):
                         name=str(level), coords=lineGeo)
                     ls.style.linestyle.width = 2.5
         os.chdir(folder)
-        kml.save(self.name + '.kml')
+        kml.save(self.name + u'.kml')
         os.chdir(orgCwd)
 
 
@@ -128,7 +131,7 @@ class kmlExport:
         result = self.dlg.exec_()
         if result == 1:
             folder = QFileDialog.getExistingDirectory()
-            self.exportItems(folder)
+            self.exportItems(toUnicode(folder))
 
     def breakConnection(self):
         try:
@@ -141,6 +144,7 @@ class kmlExport:
             pass
 
     def exportItems(self, folder):
+        folder = toUnicode(folder)
         for i in range(0, self.dlg.conLayerList.count()):
             item = self.dlg.conLayerList.item(i)
             if item.checkState() == Qt.Checked:

@@ -1,0 +1,64 @@
+<Composer title="test" visible="1">
+ <Composition resizeToContentsMarginLeft="0" snapping="0" showPages="1" guidesVisible="1" resizeToContentsMarginTop="0" worldFileMap="{de9c7172-a40a-48de-b82f-82cc471194c3}" alignmentSnap="1" printResolution="300" paperWidth="297" gridVisible="0" snapGridOffsetX="0" smartGuides="1" snapGridOffsetY="0" resizeToContentsMarginRight="0" snapTolerancePixels="5" printAsRaster="0" generateWorldFile="0" paperHeight="210" numPages="1" snapGridResolution="10" resizeToContentsMarginBottom="0">
+  <symbol alpha="1" clip_to_extent="1" type="fill" name="">
+   <layer pass="0" class="SimpleFill" locked="0">
+    <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+    <prop k="color" v="255,255,255,255"/>
+    <prop k="joinstyle" v="miter"/>
+    <prop k="offset" v="0,0"/>
+    <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+    <prop k="offset_unit" v="MM"/>
+    <prop k="outline_color" v="0,0,0,255"/>
+    <prop k="outline_style" v="no"/>
+    <prop k="outline_width" v="0.26"/>
+    <prop k="outline_width_unit" v="MM"/>
+    <prop k="style" v="solid"/>
+   </layer>
+  </symbol>
+  <ComposerLegend symbolWidth="7" title="Legend" rasterBorderWidth="0" titleAlignment="1" map="0" wmsLegendWidth="50" rasterBorderColor="0,0,0,255" wrapChar="" fontColor="#000000" legendFilterByAtlas="0" columnCount="1" wmsLegendHeight="25" columnSpace="2" symbolHeight="4" equalColumnWidth="0" resizeToContents="1" splitLayer="0" boxSpace="2" rasterBorder="1">
+   <styles>
+    <style marginBottom="2" name="title">
+     <styleFont description="PMingLiU,16,-1,5,50,0,0,0,0,0" style=""/>
+    </style>
+    <style marginTop="2" name="group">
+     <styleFont description="PMingLiU,14,-1,5,50,0,0,0,0,0" style=""/>
+    </style>
+    <style marginTop="2" name="subgroup">
+     <styleFont description="PMingLiU,12,-1,5,50,0,0,0,0,0" style=""/>
+    </style>
+    <style marginTop="2" name="symbol">
+     <styleFont description="PMingLiU,9,-1,5,50,0,0,0,0,0" style=""/>
+    </style>
+    <style marginTop="2" marginLeft="2" name="symbolLabel">
+     <styleFont description="PMingLiU,12,-1,5,50,0,0,0,0,0" style=""/>
+    </style>
+   </styles>
+   <ComposerItem pagey="136.818" page="1" id="" lastValidViewScaleFactor="-1" positionMode="0" positionLock="false" x="266.51" y="136.818" visibility="1" zValue="3" background="true" transparency="0" frameJoinStyle="miter" blendMode="0" width="28" outlineWidth="0.3" excludeFromExports="0" uuid="{50b865d4-ad9d-4c49-9de2-b0a7b16e9b82}" height="67.7" itemRotation="0" frame="false" pagex="266.51">
+    <FrameColor alpha="255" red="0" blue="0" green="0"/>
+    <BackgroundColor alpha="255" red="255" blue="255" green="255"/>
+    <customproperties/>
+   </ComposerItem>
+  </ComposerLegend>
+  <ComposerLabel valign="32" marginX="1" marginY="1" labelText="QGIS" htmlState="0" halign="1">
+   <LabelFont description="PMingLiU,10,-1,5,50,0,0,0,0,0" style=""/>
+   <FontColor red="0" blue="0" green="0"/>
+   <ComposerItem pagey="0.498042" page="1" id="" lastValidViewScaleFactor="-1" positionMode="0" positionLock="false" x="0.498042" y="0.498042" visibility="1" zValue="2" background="false" transparency="0" frameJoinStyle="miter" blendMode="0" width="93.1339" outlineWidth="0.3" excludeFromExports="0" uuid="{9132d1a2-9a42-4f04-943c-ec03525599e3}" height="17.4315" itemRotation="0" frame="false" pagex="0.498042">
+    <FrameColor alpha="255" red="0" blue="0" green="0"/>
+    <BackgroundColor alpha="255" red="255" blue="255" green="255"/>
+    <customproperties/>
+   </ComposerItem>
+  </ComposerLabel>
+  <ComposerMap followPreset="false" mapRotation="0" keepLayerSet="false" followPresetName="" id="0" previewMode="Cache" drawCanvasItems="true">
+   <Extent ymin="2664431.00056290021166205" xmin="200953.17543264126288705" ymax="2671874.4518035207875073" xmax="211021.42263706013909541"/>
+   <LayerSet/>
+   <Grid/>
+   <AtlasMap scalingMode="2" atlasDriven="0" margin="0.10000000000000001"/>
+   <ComposerItem pagey="19" page="1" id="" lastValidViewScaleFactor="2.20865" positionMode="0" positionLock="false" x="0" y="19" visibility="1" zValue="1" background="true" transparency="0" frameJoinStyle="miter" blendMode="0" width="257" outlineWidth="0.3" excludeFromExports="0" uuid="{de9c7172-a40a-48de-b82f-82cc471194c3}" height="190" itemRotation="0" frame="false" pagex="0">
+    <FrameColor alpha="255" red="0" blue="0" green="0"/>
+    <BackgroundColor alpha="255" red="255" blue="255" green="255"/>
+    <customproperties/>
+   </ComposerItem>
+  </ComposerMap>
+  <customproperties/>
+ </Composition>
+</Composer>

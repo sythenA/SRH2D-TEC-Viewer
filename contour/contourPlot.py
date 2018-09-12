@@ -8,6 +8,7 @@ from osgeo import gdal, ogr
 from osgeo.gdalconst import GA_ReadOnly
 import os
 from ..tools.TECBoxItem import layerItem
+from ..tools.toUnicode import toUnicode
 
 
 def changeCheckState(item):
@@ -133,15 +134,17 @@ class contourPlot:
             if p_item.childCount() > 0:
                 for j in range(0, p_item.childCount()):
                     c_item = p_item.child(j)
-                    layersToDraw.append((c_item.text(0), c_item.layerId,
-                                         c_item.outputFolder))
+                    layersToDraw.append(
+                        (c_item.text(0), c_item.layerId,
+                         toUnicode(c_item.outputFolder)))
             else:
                 try:
                     layerName = p_item.text(0)
                     layerId = p_item.layerId
-                    outputFolder = p_item.outputFolder
+                    outputFolder = toUnicode(p_item.outputFolder)
 
-                    layersToDraw.append((layerName, layerId, outputFolder))
+                    layersToDraw.append((layerName, layerId,
+                                         toUnicode(outputFolder)))
                 except(AttributeError):
                     pass
 
@@ -149,6 +152,7 @@ class contourPlot:
         self.dlg.layersToDraw.clear()
 
     def setOutputDir(self, assignedFolder):
+        assignedFolder = toUnicode(assignedFolder)
         for i in range(0, self.dlg.layersToDraw.topLevelItemCount()):
             p_item = self.dlg.layersToDraw.topLevelItem(i)
             if p_item.childCount() > 0:
@@ -161,7 +165,7 @@ class contourPlot:
                     p_item.outputFolder = assignedFolder
 
     def genContour(self, folder, layer, layerName):
-
+        folder = toUnicode(folder)
         provider = layer.dataProvider()
         extent = layer.extent()
         stats = provider.bandStatistics(1, QgsRasterBandStats.All, extent, 0)
@@ -179,7 +183,7 @@ class contourPlot:
 
         # Generate layer to save Contourlines in
         ogr_ds = ogr.GetDriverByName("ESRI Shapefile").CreateDataSource(
-            os.path.join(folder, str(layerName)+'.shp'))
+            toUnicode(os.path.join(folder, str(layerName)+'.shp')))
         contour_shp = ogr_ds.CreateLayer(str(layerName),
                                          geom_type=ogr.wkbLineString25D)
 
@@ -194,7 +198,7 @@ class contourPlot:
             gdal.ContourGenerate(rasDataSet.GetRasterBand(1), interval, 0, [],
                                  0, noDataVal, contour_shp, 0, 1)
             conLayer = self.iface.addVectorLayer(
-                os.path.join(folder, str(layerName)+'.shp'),
+                toUnicode(os.path.join(folder, str(layerName)+'.shp')),
                 str(layerName) + '_contour',
                 'ogr')
             conLayer.setCrs(layerCrs)
@@ -211,7 +215,7 @@ class contourPlot:
             if p_item.childCount() > 0:
                 for j in range(0, p_item.childCount()):
                     c_item = p_item.child(j)
-                    folder = c_item.outputFolder
+                    folder = toUnicode(c_item.outputFolder)
                     registry = QgsMapLayerRegistry.instance()
                     layer = registry.mapLayer(c_item.layerId)
                     layerName = p_item.text(0) + '_' + layer.name()
@@ -221,7 +225,7 @@ class contourPlot:
                         os.makedirs(folder)
                         self.genContour(folder, layer, layerName)
             else:
-                folder = p_item.outputFolder
+                folder = toUnicode(p_item.outputFolder)
                 registry = QgsMapLayerRegistry.instance()
                 layer = registry.mapLayer(p_item.layerId)
                 layerName = p_item.text(0) + '_' + p_item.text(0)
@@ -243,5 +247,6 @@ class contourPlot:
         result = self.dlg.exec_()
         if result == 1:
             folder = QFileDialog.getExistingDirectory()
+            folder = toUnicode(folder)
             self.setOutputDir(folder)
             self.exportContour()
