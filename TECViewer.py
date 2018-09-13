@@ -193,40 +193,43 @@ class TECView:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/TECView/icon.png'
+        readerIcon = os.path.join(self.plugin_dir, 'icon.png')
         self.add_action(
-            icon_path,
+            readerIcon,
             text=self.tr(u'SRH2D Post-Processing TEC File Viewer and analyser.'
                          ),
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        profileIcon = os.path.join(self.plugin_dir, '0cs_extract-01.png')
         self.add_action(
-            icon_path,
+            profileIcon,
             text=self.tr(u'Profile Viewer'),
             callback=self.profiler.run,
             parent=self.iface.mainWindow())
 
+        contourIcon = os.path.join(self.plugin_dir, '0contour-01.png')
         self.add_action(
-            icon_path,
+            contourIcon,
             text=self.tr(u'Plot Contour'),
             callback=self.contourPlot.run,
             parent=self.iface.mainWindow())
 
+        toKmlIcon = os.path.join(self.plugin_dir, '0KML_contour-01.png')
         self.add_action(
-            icon_path,
+            toKmlIcon,
             text=self.tr(u'Export to .kml'),
             callback=self.makeKml.run,
             parent=self.iface.mainWindow())
 
-        flowDirIcon = os.path.join(os.path.dirname(__file__), 'navigation.png')
+        flowDirIcon = os.path.join(self.plugin_dir, '0flow_field-01.png')
         self.add_action(
             flowDirIcon,
             text=self.tr(u'Flow Direction'),
             callback=self.vecPlot.run,
             parent=self.iface.mainWindow())
 
-        animationIcon = os.path.join(os.path.dirname(__file__), 'film.png')
+        animationIcon = os.path.join(self.plugin_dir, '0animate-01.png')
         self.add_action(
             animationIcon,
             text=self.tr(u'Make Aniamtion'),
