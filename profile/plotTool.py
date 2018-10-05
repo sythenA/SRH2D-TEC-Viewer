@@ -5,6 +5,8 @@ from qgis.PyQt.QtGui import QPrinter, QPrintDialog, QPixmap, QFileDialog
 from qgis.PyQt.QtGui import QBrush, QPainter
 from qgis.PyQt.QtSvg import QSvgGenerator
 from math import sqrt
+from ..tools.toUnicode import toUnicode
+
 
 from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotItem, QwtPlotPrintFilter, QwtLegend
 from PyQt4.Qwt5 import QwtPlot
@@ -295,6 +297,7 @@ class plotTool:
                 caption="Save Plot As .svg file",
                 directory=folder,
                 filter="Scalable Vector Graphics(*.svg)")
+        fileName = toUnicode(fileName)
 
         if fileName:
             pix = QSvgGenerator()
@@ -334,6 +337,7 @@ class plotTool:
                 caption="Save Plot As .png file",
                 directory=folder,
                 filter="Portable Network Graphics (*.png)")
+        fileName = toUnicode(fileName)
 
         if fileName:
             if not title:
@@ -380,6 +384,7 @@ class plotTool:
                 caption="Save Plot As .jpg file",
                 directory=folder,
                 filter="JPEG(*.jpg;*.jpeg)")
+        fileName = toUnicode(fileName)
 
         if fileName:
             if not title:
@@ -426,6 +431,7 @@ class plotTool:
                 caption="Save Plot As .bmp file",
                 directory=folder,
                 filter="bitmap (*.bmp)")
+        fileName = toUnicode(fileName)
 
         if fileName:
             if not title:
@@ -472,6 +478,7 @@ class plotTool:
                 caption="Save Plot As .tif file",
                 directory=folder,
                 filter="Tagged Image File Format (*.tif;*.tiff)")
+        fileName = toUnicode(fileName)
 
         if fileName:
             if not title:
@@ -518,7 +525,7 @@ class plotTool:
                 caption="Save Plot As .xbm file",
                 directory=folder,
                 filter="X Bitmap (*.xbm)")
-
+        fileName = toUnicode(fileName)
         if fileName:
             if not title:
                 title = self.settings.value('figureTitle')
@@ -564,7 +571,7 @@ class plotTool:
                 caption="Save Plot As .xpm file",
                 directory=folder,
                 filter="X Pixmap (*.xpm)")
-
+        fileName = toUnicode(fileName)
         if fileName:
             if not title:
                 title = self.settings.value('figureTitle')

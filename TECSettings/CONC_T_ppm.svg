@@ -5,11 +5,8 @@
 <desc>Generated with Qt</desc>
 <defs>
 <linearGradient gradientUnits="userSpaceOnUse" x1="0" y1="50" x2="200" y2="50" id="gradient1">
-    <stop offset="0" stop-color="#fcfbfd" stop-opacity="1" />
-    <stop offset="0.25" stop-color="#dcdcec" stop-opacity="1" />
-    <stop offset="0.5" stop-color="#a3a0cb" stop-opacity="1" />
-    <stop offset="0.75" stop-color="#6a51a3" stop-opacity="1" />
-    <stop offset="1" stop-color="#3f007d" stop-opacity="1" />
+    <stop offset="0" stop-color="#000000" stop-opacity="1" />
+    <stop offset="1" stop-color="#ffffff" stop-opacity="1" />
 </linearGradient>
 </defs>
 <g fill="none" stroke="black" stroke-width="1" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="bevel" >

@@ -1,11 +1,10 @@
 
 from ..TECViewer_dialog import TECReadSettingDiag as settingsDiag
-from ..TECViewer_dialog import Settings
 from qgis.core import QgsStyleV2, QgsVectorColorRampV2
 from qgis.core import QgsVectorGradientColorRampV2
 from PyQt4.QtGui import QListWidgetItem, QLinearGradient, QBrush, QPainter
 from PyQt4.QtGui import QIcon, QPixmap, QGradient, QColor
-from PyQt4.QtCore import QSize, QRect
+from PyQt4.QtCore import QSize, QRect, QSettings
 from PyQt4.QtSvg import QSvgGenerator
 import os
 import subprocess
@@ -23,9 +22,9 @@ class TECSettings:
             self.setAttributeList()
         self.dlg.colorRampSelector.currentIndexChanged.connect(
             self.changeColorRamp)
+        self.settings = QSettings('ManySplendid', 'SRH2D_TEC_Viewer')
 
     def setAttributeList(self):
-        # greyRamp = QgsStyleV2().defaultStyle().colorRamp('Greys').properties()
         greyRamp = QgsStyleV2().defaultStyle().colorRamp('Greys').clone()
         for attr in self.attributes:
             if type(attr) == str:
@@ -48,28 +47,26 @@ class TECSettings:
 
     def changeColorRamp(self, idx):
         currentItem = self.dlg.TECAttrList.currentItem()
-        selectedRamp = self.dlg.colorRampSelector.currentColorRamp()
-        currentItem.setColorRamp(selectedRamp.clone())
+        if not idx == 0:
+            selectedRamp = self.dlg.colorRampSelector.currentColorRamp()
+            currentItem.setColorRamp(selectedRamp.clone())
+        else:
+            greyRamp = QgsStyleV2().defaultStyle().colorRamp('Greys').clone()
+            currentItem.setColorRamp(greyRamp)
 
     def writeSettings(self):
-        filePath = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                '_settings_')
-        f = open(filePath, 'w')
         if self.dlg.resolutionInput.text():
             try:
                 res = float(self.dlg.resolutionInput.text())
-                Settings.update({'resolution': res})
-            except:
+                self.settings.setValue('resolution', res)
+            except(AttributeError):
                 pass
         if self.dlg.minDisInput.text():
             try:
                 minDist = float(self.dlg.minDisInput.text())
-                Settings.update({'min_Dist': minDist})
-            except:
+                self.settings.setValue('min_Dist', minDist)
+            except(AttributeError):
                 pass
-        for key in Settings.keys():
-            f.write(key + ' = ' + str(Settings[key]) + '\n')
-        f.close()
 
     def removeIcons(self):
         for _file in self.iconList:
@@ -78,6 +75,7 @@ class TECSettings:
     def run(self):
         result = self.dlg.exec_()
         if result == 1:
+            self.writeSettings()
             self.sendback()
             self.removeIcons()
             return self.attributes
@@ -97,8 +95,8 @@ class attrItem(QListWidgetItem):
 
     def drawIcon(self, colorRamp):
         # input color ramp object: QgsVectorColorRampV2 object.
-        # QgsVectorColorRampV2 is a virtual object, the real object name in this
-        # case is QgsVectorGradientColorRampV2 object.
+        # QgsVectorColorRampV2 is a virtual object, the real object name in
+        # this case is QgsVectorGradientColorRampV2 object.
         mStops = colorRamp.stops()
         linearGradient = QLinearGradient(0.0, 50.0, 200.0, 50.0)
         for item in mStops:

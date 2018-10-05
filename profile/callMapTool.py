@@ -2,7 +2,7 @@
 import os
 from qgis.gui import QgsRubberBand, QgsVertexMarker, QgsMapTool
 from qgis.core import QgsMapLayer, QgsProject, QgsMapLayerRegistry, QgsPoint
-from qgis.core import QgsPointXY
+from qgis.core import QgsPoint
 from qgis.PyQt.QtCore import Qt, QT_VERSION_STR, QSize, QLine, QRect
 from qgis.PyQt.QtCore import QSettings
 from qgis.PyQt.QtGui import QWidget, QColor, QListWidgetItem, QPen, QBrush
@@ -169,7 +169,7 @@ class profileSec(QWidget):
                     k = 1
                 while not feature.geometry().vertexAt(k) == QgsPoint(0, 0):
                     point2 = tool.toMapCoordinates(
-                        layer, QgsPointXY(feature.geometry().vertexAt(k)))
+                        layer, QgsPoint(feature.geometry().vertexAt(k)))
                     pointstoDraw += [[point2.x(), point2.y()]]
                     k += 1
         self.updateProfile(pointstoDraw, tool, plotProfile)
@@ -228,7 +228,7 @@ class profileSec(QWidget):
                 k = 1
             while not feature.geometry().vertexAt(k) == QgsPoint(0, 0):
                 point2 = mapTool.toMapCoordinates(
-                    layer, QgsPointXY(feature.geometry().vertexAt(k)))
+                    layer, QgsPoint(feature.geometry().vertexAt(k)))
                 pointstoDraw += [[point2.x(), point2.y()]]
                 k += 1
             self.updateProfile(pointstoDraw, mapTool, False)
@@ -259,7 +259,7 @@ class profileSec(QWidget):
                 k = 1
             while not feature.geometry().vertexAt(k) == QgsPoint(0, 0):
                 point2 = mapTool.toMapCoordinates(
-                    layer, QgsPointXY(feature.geometry().vertexAt(k)))
+                    layer, QgsPoint(feature.geometry().vertexAt(k)))
                 pointstoDraw += [[point2.x(), point2.y()]]
                 k += 1
             self.updateProfile(pointstoDraw, mapTool, False)
@@ -291,7 +291,7 @@ class profileSec(QWidget):
                 k = 1
             while not feature.geometry().vertexAt(k) == QgsPoint(0, 0):
                 point2 = mapTool.toMapCoordinates(
-                    layer, QgsPointXY(feature.geometry().vertexAt(k)))
+                    layer, QgsPoint(feature.geometry().vertexAt(k)))
                 pointstoDraw += [[point2.x(), point2.y()]]
                 k += 1
             self.updateProfile(pointstoDraw, mapTool, False)
@@ -341,7 +341,7 @@ class profileSec(QWidget):
             if self.profiles and exportFile:
                 f = open(exportFile, 'w')
                 if self.dlg.batchChecker.checkState() == 0:
-                    plotTool().exportToTxt(self.profiles)
+                    plotTool().exportToTxt(self.profiles, f)
 
                 elif self.dlg.batchChecker.checkState() == 2:
                     layer = self.dlg.layerCombo.currentLayer()
@@ -426,7 +426,7 @@ class profileSec(QWidget):
                     k = 1
                 while not feature.geometry().vertexAt(k) == QgsPoint(0, 0):
                     point2 = mapTool.toMapCoordinates(
-                        layer, QgsPointXY(feature.geometry().vertexAt(k)))
+                        layer, QgsPoint(feature.geometry().vertexAt(k)))
                     pointstoDraw += [[point2.x(), point2.y()]]
                     k += 1
                 self.updateProfile(pointstoDraw, mapTool, False)

@@ -125,6 +125,7 @@ class profileViewerDialog(QtGui.QDialog, FORM_CLASS):
 
         # Delete the icons under plugin folder
         folderPath = os.path.dirname(__file__)
+        folderPath = unicode(folderPath.decode('utf-8'))
         fileUnderFold = os.listdir(folderPath)
 
         for _file in fileUnderFold:

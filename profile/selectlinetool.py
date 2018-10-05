@@ -23,7 +23,7 @@
 #
 # ---------------------------------------------------------------------
 import qgis
-from qgis.core import QgsMapLayer, QgsSpatialIndex, QgsPointXY, QgsFeature
+from qgis.core import QgsMapLayer, QgsSpatialIndex, QgsPoint, QgsFeature
 from qgis.core import QgsFeatureRequest, QgsRectangle, QgsGeometry
 
 from qgis.PyQt.QtGui import QMessageBox
@@ -103,7 +103,7 @@ class SelectLineTool:
             return None, closestFeatures
 
         # get the point coordinates in the layer's CRS
-        point = tool.toLayerCoordinates(layer, QgsPointXY(
+        point = tool.toLayerCoordinates(layer, QgsPoint(
             newPoints[0][0], newPoints[0][1]))
         closestFeatures = self.select_closest_feature(
                 iface, layer, point)
